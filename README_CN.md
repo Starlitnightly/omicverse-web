@@ -117,7 +117,11 @@ python3 app.py
 
 - `omicverse-web = omicverse_web.start_server:main`
 
-## 6. 引用
+## 6. 维护与子模块同步
+
+独立仓库维护方式和主仓库子模块同步步骤见 [MAINTENANCE_CN.md](MAINTENANCE_CN.md)。
+
+## 7. 引用
 
 如果你在研究中使用了 OmicVerse，请引用：
 
@@ -126,7 +130,7 @@ python3 app.py
 > Nature Communications (2024), 15:5983.  
 > DOI: https://doi.org/10.1038/s41467-024-50194-3
 
-## 7. 许可证
+## 8. 许可证
 
 本目录采用 GNU General Public License v3.0（GPL-3.0）。
 

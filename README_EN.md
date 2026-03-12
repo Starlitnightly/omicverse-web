@@ -117,7 +117,11 @@ Script entry (`pyproject.toml`):
 
 - `omicverse-web = omicverse_web.start_server:main`
 
-## 6. Citation
+## 6. Maintenance and Submodule Sync
+
+For standalone maintenance and parent-repo submodule synchronization, see [MAINTENANCE.md](MAINTENANCE.md).
+
+## 7. Citation
 
 If you use OmicVerse in your research, please cite:
 
@@ -126,7 +130,7 @@ If you use OmicVerse in your research, please cite:
 > Nature Communications (2024), 15:5983.  
 > DOI: https://doi.org/10.1038/s41467-024-50194-3
 
-## 7. License
+## 8. License
 
 This directory is licensed under GNU General Public License v3.0 (GPL-3.0).
 
