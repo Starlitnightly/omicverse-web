@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/*
+routes/__pycache__/*
+routes/*.pyc
+.DS_Store
+*.DS_Store

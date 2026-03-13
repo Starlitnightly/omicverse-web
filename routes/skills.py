@@ -9,11 +9,16 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import Dict, List, Tuple
+from urllib.parse import quote
 
 import omicverse
 from flask import Blueprint, jsonify, request
 
-from omicverse.utils.skill_registry import build_multi_path_skill_registry
+from omicverse.utils.skill_registry import (
+    build_multi_path_skill_registry,
+    discover_multi_path_skill_roots,
+)
+from utils.remote_store import request_remote_json, remote_store_enabled
 
 
 bp = Blueprint("skills", __name__)
@@ -27,7 +32,18 @@ def _workspace_root() -> Path:
     return Path.cwd().resolve()
 
 
+def _skill_roots() -> List[Tuple[str, Path]]:
+    return discover_multi_path_skill_roots(_package_root(), _workspace_root())
+
+
+def _builtin_skill_roots() -> List[Tuple[str, Path]]:
+    return [(label, root) for label, root in _skill_roots() if label != "Workspace"]
+
+
 def _builtin_skill_root() -> Path:
+    roots = _builtin_skill_roots()
+    if roots:
+        return roots[-1][1]
     return (_package_root() / ".claude" / "skills").resolve()
 
 
@@ -36,10 +52,7 @@ def _workspace_skill_root() -> Path:
 
 
 def _allowed_roots() -> List[Tuple[str, Path]]:
-    return [
-        ("Built-in", _builtin_skill_root()),
-        ("Workspace", _workspace_skill_root()),
-    ]
+    return _skill_roots()
 
 
 def _resolve_skill_path(raw_path: str) -> Path:
@@ -84,11 +97,14 @@ def _reference_file(skill_dir: Path) -> Path:
 
 
 def _is_builtin_path(path: Path) -> bool:
-    try:
-        path.resolve().relative_to(_builtin_skill_root())
-        return True
-    except ValueError:
-        return False
+    resolved = path.resolve()
+    for _, root in _builtin_skill_roots():
+        try:
+            resolved.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
 
 
 def _is_workspace_path(path: Path) -> bool:
@@ -101,13 +117,11 @@ def _is_workspace_path(path: Path) -> bool:
 
 def _is_editable_path(path: Path) -> bool:
     resolved = path.resolve()
-    for _, root in _allowed_roots():
-        try:
-            resolved.relative_to(root)
-            return True
-        except ValueError:
-            continue
-    return False
+    try:
+        resolved.relative_to(_workspace_skill_root())
+        return True
+    except ValueError:
+        return False
 
 
 def _markdown_excerpt(text: str, limit: int = 260) -> str:
@@ -149,12 +163,14 @@ def _skill_entry_from_metadata(slug: str, metadata) -> Dict[str, object]:
     root_label = "Workspace"
     root_path = _workspace_skill_root()
     editable = _is_editable_path(skill_file)
-    try:
-        skill_dir.relative_to(_builtin_skill_root())
-        root_label = "Built-in"
-        root_path = _builtin_skill_root()
-    except ValueError:
-        pass
+    for label, root in _allowed_roots():
+        try:
+            skill_dir.relative_to(root)
+            root_label = label
+            root_path = root
+            break
+        except ValueError:
+            continue
 
     try:
         rel_path = str(skill_file.relative_to(root_path))
@@ -165,6 +181,7 @@ def _skill_entry_from_metadata(slug: str, metadata) -> Dict[str, object]:
         "name": metadata.name,
         "slug": slug,
         "description": metadata.description,
+        "summary": metadata.description,
         "version": "",
         "path": str(skill_file),
         "filename": skill_file.name,
@@ -172,6 +189,13 @@ def _skill_entry_from_metadata(slug: str, metadata) -> Dict[str, object]:
         "relative_path": rel_path,
         "root_label": root_label,
         "editable": editable,
+        "source": "local",
+        "remote_slug": "",
+        "author": "",
+        "tags": [],
+        "homepage_url": "",
+        "install_command": "",
+        "package_name": "",
         "updated_at": int(skill_file.stat().st_mtime) if skill_file.exists() else 0,
         "reference_path": str(reference_file) if reference_file.exists() else "",
         "reference_relative_path": str(reference_file.relative_to(root_path)) if reference_file.exists() else "",
@@ -179,18 +203,97 @@ def _skill_entry_from_metadata(slug: str, metadata) -> Dict[str, object]:
     }
 
 
+def _remote_skill_entry(payload: Dict[str, object]) -> Dict[str, object]:
+    slug = str(payload.get("slug") or "").strip()
+    summary = str(payload.get("summary") or payload.get("description") or "").strip()
+    tags = payload.get("tags") if isinstance(payload.get("tags"), list) else []
+    return {
+        "name": str(payload.get("name") or slug),
+        "slug": slug,
+        "description": str(payload.get("description") or ""),
+        "summary": summary,
+        "version": str(payload.get("version") or ""),
+        "path": f"remote://{slug}",
+        "filename": "SKILL.md",
+        "directory": "",
+        "relative_path": str(payload.get("package_name") or slug or "online-skill"),
+        "root_label": "Online",
+        "editable": False,
+        "source": "online",
+        "remote_slug": slug,
+        "author": str(payload.get("author") or ""),
+        "tags": [str(tag) for tag in tags if str(tag).strip()],
+        "homepage_url": str(payload.get("homepage_url") or ""),
+        "install_command": str(payload.get("install_command") or ""),
+        "package_name": str(payload.get("package_name") or ""),
+        "updated_at": 0,
+        "reference_path": "",
+        "reference_relative_path": "",
+        "reference_excerpt": _markdown_excerpt(summary),
+    }
+
+
+def _fetch_remote_skills() -> tuple[List[Dict[str, object]], str]:
+    if not remote_store_enabled():
+        return [], ""
+    data, status = request_remote_json("/api/v1/store/skills")
+    if status != 200:
+        return [], str(data.get("error") or "Failed to load online skills")
+    items = data.get("skills")
+    if not isinstance(items, list):
+        return [], ""
+    return [_remote_skill_entry(item) for item in items if isinstance(item, dict)], ""
+
+
+def _remote_skill_markdown(skill: Dict[str, object]) -> str:
+    lines = [f"# {skill.get('name') or skill.get('slug')}", ""]
+
+    description = str(skill.get("description") or "").strip()
+    if description:
+        lines.extend([description, ""])
+
+    lines.extend(["## Metadata", ""])
+    lines.append(f"- Slug: `{skill.get('slug') or ''}`")
+    if skill.get("version"):
+        lines.append(f"- Version: `{skill['version']}`")
+    if skill.get("author"):
+        lines.append(f"- Author: {skill['author']}")
+    if skill.get("package_name"):
+        lines.append(f"- Package: `{skill['package_name']}`")
+    if skill.get("install_command"):
+        lines.append(f"- Install: `{skill['install_command']}`")
+    if skill.get("homepage_url"):
+        lines.append(f"- Homepage: {skill['homepage_url']}")
+    tags = skill.get("tags") if isinstance(skill.get("tags"), list) else []
+    if tags:
+        lines.append(f"- Tags: {', '.join(str(tag) for tag in tags)}")
+
+    readme_markdown = str(skill.get("readme_markdown") or "").strip()
+    if readme_markdown:
+        lines.extend(["", "## README", "", readme_markdown])
+
+    return "\n".join(lines).strip() + "\n"
+
+
 @bp.route("/list", methods=["GET"])
 def list_skills():
     registry = build_multi_path_skill_registry(_package_root(), _workspace_root())
-    items = [
+    local_items = [
         _skill_entry_from_metadata(slug, metadata)
         for slug, metadata in sorted(registry.skill_metadata.items(), key=lambda item: item[0].lower())
     ]
+    remote_items, remote_error = _fetch_remote_skills()
+    builtin_roots = [{"label": label, "path": str(root)} for label, root in _builtin_skill_roots()]
     return jsonify(
         {
-            "skills": items,
+            "skills": local_items + remote_items,
+            "local_count": len(local_items),
+            "online_count": len(remote_items),
+            "online_enabled": remote_store_enabled(),
+            "online_error": remote_error,
             "workspace_root": str(_workspace_skill_root()),
             "builtin_root": str(_builtin_skill_root()),
+            "builtin_roots": builtin_roots,
         }
     )
 
@@ -256,6 +359,37 @@ def open_reference():
             "content": content,
             "type": "skill",
             "editable": editable,
+        }
+    )
+
+
+@bp.route("/open_remote", methods=["POST"])
+def open_remote_skill():
+    payload = request.get_json(silent=True) or {}
+    slug = str(payload.get("slug") or "").strip()
+    if not slug:
+        return jsonify({"error": "Missing remote skill slug"}), 400
+    if not remote_store_enabled():
+        return jsonify({"error": "Remote skill store is not configured"}), 503
+
+    data, status = request_remote_json(f"/api/v1/store/skills/{quote(slug)}")
+    if status != 200:
+        return jsonify(data), status
+
+    skill = data.get("skill")
+    if not isinstance(skill, dict):
+        return jsonify({"error": "Invalid remote skill payload"}), 502
+
+    return jsonify(
+        {
+            "name": str(skill.get("name") or slug),
+            "filename": f"{slug}.md",
+            "path": f"remote://{slug}",
+            "content": _remote_skill_markdown(skill),
+            "type": "skill",
+            "editable": False,
+            "reference_path": "",
+            "reference_content": "",
         }
     )
 

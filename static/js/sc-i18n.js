@@ -215,9 +215,18 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'skills.modifyReference': 'Modify Reference',
                 'skills.viewSkill': 'View Skill',
                 'skills.viewReference': 'View Reference',
+                'skills.viewDetail': 'View Detail',
+                'skills.openHomepage': 'Homepage',
                 'skills.location': 'Location',
+                'skills.local': 'Local',
+                'skills.online': 'Online',
                 'skills.version': 'Version',
                 'skills.path': 'Path',
+                'skills.author': 'Author',
+                'skills.tags': 'Tags',
+                'skills.package': 'Package',
+                'skills.sources': 'Sources',
+                'skills.all': 'All',
                 'skills.reference': 'Reference',
                 'skills.referenceEmpty': 'No reference yet. You can leave it empty or add extra guidance later.',
                 'skills.readOnly': 'Read only',
@@ -228,6 +237,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'skills.importExists': 'A skill with the same slug already exists.',
                 'skills.createFailed': 'Create skill failed',
                 'skills.loadFailed': 'Load skills failed',
+                'skills.onlineLoadFailed': 'Online skills unavailable',
                 'kernel.monitor': 'Kernel Monitor',
                 'kernel.memory': 'Memory Usage',
                 'kernel.topVars': 'Top Variables',
@@ -518,8 +528,10 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'var.loadToViz': 'Load to Visualization',
                 'parameter.none': 'No parameters required.',
                 'view.agentTitle': 'Agent Chat',
+                'view.accountTitle': 'Personal Center',
                 'view.codeTitle': 'Python Code Editor',
                 'breadcrumb.agent': 'Agent Chat',
+                'breadcrumb.account': 'Personal Center',
                 'breadcrumb.code': 'Python Code Editor',
                 'code.placeholder': '# Enter Python code (variables: adata, sc, pd, np)\n# Shift+Enter to run',
                 'cell.typeCode': 'Code',
@@ -550,6 +562,37 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'user.settings': 'Settings'
                 , 'user.help': 'Help'
                 , 'user.logout': 'Sign out'
+                , 'account.center': 'Personal Center'
+                , 'account.guest': 'Guest'
+                , 'account.guestHint': 'Sign in to manage your profile.'
+                , 'account.serverOffline': 'Account server unavailable'
+                , 'account.signIn': 'Sign in'
+                , 'account.register': 'Register'
+                , 'account.profile': 'Profile'
+                , 'account.settings': 'Settings'
+                , 'account.help': 'Help'
+                , 'account.logout': 'Sign out'
+                , 'account.email': 'Email'
+                , 'account.password': 'Password'
+                , 'account.displayName': 'Display Name'
+                , 'account.saveProfile': 'Save Profile'
+                , 'account.loginSuccess': 'Signed in successfully'
+                , 'account.registerSuccess': 'Registered successfully'
+                , 'account.logoutSuccess': 'Signed out'
+                , 'account.loginFailed': 'Sign in failed'
+                , 'account.registerFailed': 'Registration failed'
+                , 'account.profileSaved': 'Profile updated'
+                , 'account.profileSaveFailed': 'Profile update failed'
+                , 'account.profileHintReadonly': 'Profile information is read only in this view.'
+                , 'account.profileHintEditable': 'Only the display name is editable for now.'
+                , 'account.profileIntro': 'Manage the information shown in the personal center.'
+                , 'account.loggedInAs': 'Signed in as'
+                , 'account.memberSince': 'Member since'
+                , 'account.status': 'Status'
+                , 'account.active': 'Active'
+                , 'account.editing': 'Editing profile'
+                , 'account.editProfile': 'Edit Profile'
+                , 'account.helpText': 'This account only affects the top-right personal center. Analysis, upload, notebooks, and tools remain available without login.'
             },
             zh: {
                 'lang.toggle': 'EN',
@@ -746,9 +789,18 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'skills.modifyReference': '修改 Reference',
                 'skills.viewSkill': '查看 Skill',
                 'skills.viewReference': '查看 Reference',
+                'skills.viewDetail': '查看详情',
+                'skills.openHomepage': '主页',
                 'skills.location': '位置',
+                'skills.local': '本地',
+                'skills.online': '在线',
                 'skills.version': '版本',
                 'skills.path': '路径',
+                'skills.author': '作者',
+                'skills.tags': '标签',
+                'skills.package': '包名',
+                'skills.sources': '来源',
+                'skills.all': '全部',
                 'skills.reference': '参考',
                 'skills.referenceEmpty': '还没有 reference.md。你可以先留空，之后再补充说明。',
                 'skills.readOnly': '只读',
@@ -759,6 +811,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'skills.importExists': '同名 slug 的 skill 已存在。',
                 'skills.createFailed': '创建 skill 失败',
                 'skills.loadFailed': '加载 skills 失败',
+                'skills.onlineLoadFailed': '在线技能暂时不可用',
                 'kernel.monitor': 'Kernel 监控',
                 'kernel.memory': '内存占用',
                 'kernel.topVars': '变量占用 Top 10',
@@ -1049,8 +1102,10 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'var.loadToViz': '加载到可视化',
                 'parameter.none': '该工具无需参数设置',
                 'view.agentTitle': 'Agent 对话',
+                'view.accountTitle': '个人中心',
                 'view.codeTitle': 'Python 代码编辑器',
                 'breadcrumb.agent': 'Agent 对话',
+                'breadcrumb.account': '个人中心',
                 'breadcrumb.code': 'Python 代码编辑器',
                 'code.placeholder': '# 输入Python代码 (可用变量: adata, sc, pd, np)\n# Shift+Enter 运行代码',
                 'cell.typeCode': 'Code',
@@ -1081,6 +1136,37 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'user.settings': '设置'
                 , 'user.help': '帮助'
                 , 'user.logout': '退出'
+                , 'account.center': '个人中心'
+                , 'account.guest': '访客'
+                , 'account.guestHint': '登录后可管理右上角个人资料。'
+                , 'account.serverOffline': '账号服务暂不可用'
+                , 'account.signIn': '登录'
+                , 'account.register': '注册'
+                , 'account.profile': '个人资料'
+                , 'account.settings': '设置'
+                , 'account.help': '帮助'
+                , 'account.logout': '退出登录'
+                , 'account.email': '邮箱'
+                , 'account.password': '密码'
+                , 'account.displayName': '显示名称'
+                , 'account.saveProfile': '保存资料'
+                , 'account.loginSuccess': '登录成功'
+                , 'account.registerSuccess': '注册成功'
+                , 'account.logoutSuccess': '已退出登录'
+                , 'account.loginFailed': '登录失败'
+                , 'account.registerFailed': '注册失败'
+                , 'account.profileSaved': '个人资料已更新'
+                , 'account.profileSaveFailed': '个人资料更新失败'
+                , 'account.profileHintReadonly': '当前视图仅展示个人资料。'
+                , 'account.profileHintEditable': '当前仅支持修改显示名称。'
+                , 'account.profileIntro': '管理个人中心中展示的资料信息。'
+                , 'account.loggedInAs': '当前登录邮箱'
+                , 'account.memberSince': '注册时间'
+                , 'account.status': '状态'
+                , 'account.active': '已登录'
+                , 'account.editing': '正在编辑资料'
+                , 'account.editProfile': '编辑资料'
+                , 'account.helpText': '这个账号只影响右上角个人中心，不会影响分析、上传、Notebook 或其他工具使用。'
             }
         };
         if (!key) return '';

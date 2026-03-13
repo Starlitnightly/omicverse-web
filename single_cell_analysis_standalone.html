@@ -209,6 +209,32 @@
                         </div>
                     </li>
                 </ul>
+                <ul class="nxl-navbar" id="skills-store-nav" style="display: none;">
+                    <li class="nxl-item nxl-caption">
+                        <label data-i18n="skills.sources">Sources</label>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link skills-nav-link" id="skills-source-all-btn" onclick="singleCellApp.setSkillsSourceFilter('all')">
+                            <span class="nxl-micon"><i class="feather-layers"></i></span>
+                            <span class="nxl-mtext" data-i18n="skills.all">All</span>
+                            <span class="skills-nav-count" id="skills-source-all-count">0</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link skills-nav-link" id="skills-source-local-btn" onclick="singleCellApp.setSkillsSourceFilter('local')">
+                            <span class="nxl-micon"><i class="feather-hard-drive"></i></span>
+                            <span class="nxl-mtext" data-i18n="skills.local">Local</span>
+                            <span class="skills-nav-count" id="skills-source-local-count">0</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link skills-nav-link" id="skills-source-online-btn" onclick="singleCellApp.setSkillsSourceFilter('online')">
+                            <span class="nxl-micon"><i class="feather-cloud"></i></span>
+                            <span class="nxl-mtext" data-i18n="skills.online">Online</span>
+                            <span class="skills-nav-count" id="skills-source-online-count">0</span>
+                        </a>
+                    </li>
+                </ul>
                 <div class="file-manager" id="file-manager">
                     <div class="fm-section">
                         <div class="fm-section-header" onclick="singleCellApp.toggleSection('file-browser-section')">
@@ -441,33 +467,47 @@
                     </div>
                     
                     <!-- User Profile -->
-                    <div class="dropdown nxl-h-item">
-                        <a href="javascript:void(0);" class="nxl-head-link me-0" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                            <div class="avatar-image avatar-sm">
-                                <img src="static/picture/1.png" alt="" class="img-fluid">
+                    <div class="dropdown nxl-h-item" id="account-menu-dropdown">
+                        <a href="javascript:void(0);" class="nxl-head-link me-0" id="account-menu-toggle" aria-expanded="false">
+                            <div class="avatar-image avatar-sm bg-primary text-white d-flex align-items-center justify-content-center">
+                                <span id="account-avatar-letter" class="fw-semibold">G</span>
                             </div>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-menu">
-                            <div class="d-flex justify-content-between align-items-center user-head">
-                                <h6 class="fw-bold text-dark mb-0" data-i18n="user.menu">User Menu</h6>
+                        <div class="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-menu" id="account-menu-panel">
+                            <div class="user-head">
+                                <div class="user-head-avatar">
+                                    <span id="account-menu-avatar-letter">G</span>
+                                </div>
+                                <div class="user-head-copy">
+                                    <h6 class="fw-bold text-dark mb-0" id="account-menu-title" data-i18n="account.center">Personal Center</h6>
+                                    <div class="fs-11 text-muted mt-1" id="account-menu-subtitle" data-i18n="account.guestHint">Sign in to manage your profile.</div>
+                                </div>
                             </div>
                             <div class="user-body">
-                                <a href="javascript:void(0);" class="dropdown-item">
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-profile-link" style="display:none;">
                                     <i class="feather-user me-3"></i>
-                                    <span data-i18n="user.profile">Profile</span>
+                                    <span data-i18n="account.profile">Profile</span>
                                 </a>
-                                <a href="javascript:void(0);" class="dropdown-item">
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-settings-link" style="display:none;">
                                     <i class="feather-settings me-3"></i>
-                                    <span data-i18n="user.settings">Settings</span>
+                                    <span data-i18n="account.settings">Settings</span>
                                 </a>
-                                <a href="javascript:void(0);" class="dropdown-item">
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-login-link">
+                                    <i class="feather-log-in me-3"></i>
+                                    <span data-i18n="account.signIn">Sign in</span>
+                                </a>
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-register-link">
+                                    <i class="feather-user-plus me-3"></i>
+                                    <span data-i18n="account.register">Register</span>
+                                </a>
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-help-link">
                                     <i class="feather-help-circle me-3"></i>
-                                    <span data-i18n="user.help">Help</span>
+                                    <span data-i18n="account.help">Help</span>
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <a href="javascript:void(0);" class="dropdown-item">
+                                <a href="javascript:void(0);" class="dropdown-item" id="account-logout-link" style="display:none;">
                                     <i class="feather-log-out me-3"></i>
-                                    <span data-i18n="user.logout">Sign out</span>
+                                    <span data-i18n="account.logout">Sign out</span>
                                 </a>
                             </div>
                         </div>
@@ -1569,6 +1609,60 @@
                 </div>
                 <!-- End Skills View -->
 
+                <!-- Account View -->
+                <div id="account-view" class="content-view" style="display: none;">
+                    <div class="account-view-shell">
+                        <div class="account-hero">
+                            <div class="account-hero-avatar" id="account-view-avatar">G</div>
+                            <div class="account-hero-copy">
+                                <div class="account-kicker" data-i18n="account.center">Personal Center</div>
+                                <h2 class="account-title" id="account-view-title" data-i18n="account.center">Personal Center</h2>
+                                <p class="account-subtitle" id="account-view-subtitle" data-i18n="account.guestHint">Sign in to manage your profile.</p>
+                            </div>
+                            <div class="account-hero-actions">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="account-view-refresh-btn" onclick="singleCellApp.refreshAccountProfile(); singleCellApp.renderAccountCenter();" data-i18n="common.refresh">Refresh</button>
+                            </div>
+                        </div>
+                        <div class="account-grid">
+                            <section class="account-card">
+                                <div class="account-card-label" data-i18n="account.loggedInAs">Signed in as</div>
+                                <div class="account-card-value" id="account-view-email">-</div>
+                                <div class="account-card-meta" id="account-view-created">-</div>
+                            </section>
+                            <section class="account-card">
+                                <div class="account-card-label" data-i18n="account.status">Status</div>
+                                <div class="account-card-value" id="account-view-status">-</div>
+                                <div class="account-card-meta" data-i18n="account.profileHintEditable">Only the display name is editable for now.</div>
+                            </section>
+                        </div>
+                        <div class="account-panel">
+                            <div class="account-panel-head">
+                                <div>
+                                    <h3 class="account-panel-title" id="account-panel-title" data-i18n="account.profile">Profile</h3>
+                                    <p class="account-panel-subtitle" id="account-panel-subtitle" data-i18n="account.profileIntro">Manage the information shown in the personal center.</p>
+                                </div>
+                            </div>
+                            <form id="account-center-form" class="account-form">
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-center-display-name" data-i18n="account.displayName">Display Name</label>
+                                    <input type="text" class="form-control" id="account-center-display-name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-center-email" data-i18n="account.email">Email</label>
+                                    <input type="email" class="form-control" id="account-center-email" readonly>
+                                </div>
+                                <div class="form-text mb-3" id="account-center-hint" data-i18n="account.profileHintReadonly">Profile information is read only in this view.</div>
+                                <div id="account-center-message" class="alert d-none" style="display:none;"></div>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" id="account-center-save-btn" data-i18n="account.saveProfile">Save Profile</button>
+                                    <button type="button" class="btn btn-outline-secondary" id="account-center-edit-btn" onclick="singleCellApp.openAccountCenter(true)" data-i18n="account.editProfile">Edit Profile</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Account View -->
+
                 <!-- Terminal View — fills nxl-container; session list is in nxl-navigation -->
                 <div id="terminal-view" class="content-view term-full-view" style="display:none;">
                     <div id="term-panels"></div>
@@ -1744,10 +1838,91 @@
 
     <input type="file" id="skill-import-input" accept=".md,.txt" style="display:none;" onchange="singleCellApp.handleSkillImportFile(event)">
 
+    <div class="modal fade" id="accountAuthModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" data-i18n="account.center">Personal Center</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="account-login-tab" data-bs-toggle="tab" data-bs-target="#account-login-pane" type="button" role="tab" data-i18n="account.signIn">Sign in</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="account-register-tab" data-bs-toggle="tab" data-bs-target="#account-register-pane" type="button" role="tab" data-i18n="account.register">Register</button>
+                        </li>
+                    </ul>
+                    <div id="account-auth-message" class="alert d-none" style="display:none;"></div>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="account-login-pane" role="tabpanel">
+                            <form id="account-login-form">
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-login-email" data-i18n="account.email">Email</label>
+                                    <input type="email" class="form-control" id="account-login-email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-login-password" data-i18n="account.password">Password</label>
+                                    <input type="password" class="form-control" id="account-login-password" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100" data-i18n="account.signIn">Sign in</button>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="account-register-pane" role="tabpanel">
+                            <form id="account-register-form">
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-register-name" data-i18n="account.displayName">Display Name</label>
+                                    <input type="text" class="form-control" id="account-register-name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-register-email" data-i18n="account.email">Email</label>
+                                    <input type="email" class="form-control" id="account-register-email" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="account-register-password" data-i18n="account.password">Password</label>
+                                    <input type="password" class="form-control" id="account-register-password" minlength="8" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100" data-i18n="account.register">Register</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="accountProfileModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="account-profile-modal-title" data-i18n="account.profile">Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="account-profile-form">
+                        <div class="mb-3">
+                            <label class="form-label" for="account-profile-display-name" data-i18n="account.displayName">Display Name</label>
+                            <input type="text" class="form-control" id="account-profile-display-name" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="account-profile-email" data-i18n="account.email">Email</label>
+                            <input type="email" class="form-control" id="account-profile-email" readonly>
+                        </div>
+                        <div class="form-text mb-3" id="account-profile-hint" data-i18n="account.profileHintReadonly">Profile information is read only in this view.</div>
+                        <div id="account-profile-message" class="alert d-none" style="display:none;"></div>
+                        <button type="submit" class="btn btn-primary" id="account-profile-save-btn" data-i18n="account.saveProfile">Save Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main application (split into functional modules) -->
     <script src="static/js/sc-core.js"></script>
     <script src="static/js/sc-i18n.js"></script>
     <script src="static/js/sc-ui.js"></script>
+    <script src="static/js/sc-account.js"></script>
     <script src="static/js/sc-agent.js"></script>
     <script src="static/js/sc-kernel.js"></script>
     <script src="static/js/sc-filesystem.js"></script>

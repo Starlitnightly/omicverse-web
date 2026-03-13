@@ -305,6 +305,171 @@ html.app-skin-dark .file-upload-area:hover {
   padding: 1.25rem;
 }
 
+.skills-nav-link {
+  position: relative;
+}
+
+.skills-nav-link.active {
+  background: rgba(11, 122, 39, 0.1);
+}
+
+.skills-nav-count {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+#account-menu-dropdown .dropdown-menu {
+  min-width: 280px;
+}
+
+#account-menu-dropdown.show .nxl-head-link {
+  background: rgba(11, 122, 39, 0.08);
+  border-radius: 999px;
+}
+
+.nxl-user-menu .user-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.35rem 0 0.9rem;
+}
+
+.user-head-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--ov-primary), #29a35a);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex: 0 0 auto;
+}
+
+.user-head-copy {
+  min-width: 0;
+}
+
+.user-head-copy h6 {
+  line-height: 1.2;
+}
+
+.user-head-copy #account-menu-subtitle {
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.nxl-user-menu .user-body .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.account-view-shell {
+  padding: 1.25rem;
+}
+
+.account-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(11, 122, 39, 0.12);
+  border-radius: 1.1rem;
+  background:
+    radial-gradient(circle at top right, rgba(11, 122, 39, 0.12), transparent 32%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(236, 244, 238, 0.96));
+  box-shadow: 0 18px 40px rgba(16, 24, 40, 0.06);
+}
+
+.account-hero-avatar {
+  width: 4.25rem;
+  height: 4.25rem;
+  border-radius: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--ov-primary), #29a35a);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
+.account-hero-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-kicker,
+.account-card-label {
+  color: var(--ov-primary);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-title {
+  margin: 0.25rem 0 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.account-subtitle,
+.account-card-meta,
+.account-panel-subtitle {
+  color: #5b6676;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.account-card,
+.account-panel {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+}
+
+.account-card-value {
+  margin-top: 0.45rem;
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.account-panel-head {
+  margin-bottom: 1rem;
+}
+
+.account-panel-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
 .skills-hero {
   display: flex;
   justify-content: space-between;
@@ -616,6 +781,46 @@ html.app-skin-dark .skill-card-title {
   color: #f8fafc;
 }
 
+html.app-skin-dark .skills-nav-link.active {
+  background: rgba(34, 197, 94, 0.14);
+}
+
+html.app-skin-dark .skills-nav-count {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+html.app-skin-dark #account-menu-dropdown.show .nxl-head-link {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+html.app-skin-dark .account-hero {
+  border-color: rgba(34, 197, 94, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.98));
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.45);
+}
+
+html.app-skin-dark .account-title,
+html.app-skin-dark .account-card-value,
+html.app-skin-dark .account-panel-title {
+  color: #f8fafc;
+}
+
+html.app-skin-dark .account-subtitle,
+html.app-skin-dark .account-card-meta,
+html.app-skin-dark .account-panel-subtitle,
+html.app-skin-dark .user-head-copy #account-menu-subtitle {
+  color: #94a3b8 !important;
+}
+
+html.app-skin-dark .account-card,
+html.app-skin-dark .account-panel {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.35);
+}
+
 html.app-skin-dark .skills-subtitle,
 html.app-skin-dark .skills-summary,
 html.app-skin-dark .skill-card-slug,
@@ -699,7 +904,8 @@ html.app-skin-dark .skills-empty-icon {
 
 @media (max-width: 768px) {
   .skills-hero,
-  .skills-toolbar {
+  .skills-toolbar,
+  .account-hero {
     flex-direction: column;
     align-items: stretch;
   }
@@ -725,5 +931,9 @@ html.app-skin-dark .skills-empty-icon {
   .skills-search-wrap {
     min-width: 0;
     max-width: none;
+  }
+
+  .account-grid {
+    grid-template-columns: 1fr;
   }
 }

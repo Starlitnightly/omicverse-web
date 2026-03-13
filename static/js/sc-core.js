@@ -21,11 +21,16 @@ class SingleCellAnalysis {
         this.skills = [];
         this.filteredSkills = [];
         this.skillsLoaded = false;
+        this.localSkillCount = 0;
+        this.onlineSkillCount = 0;
+        this.skillsSourceFilter = 'all';
         this.codeFontSize = 13;
         this.fileTreeLoaded = false;
         this.contextTargetPath = '';
         this.contextTargetIsDir = true;
         this.contextClipboard = null;
+        this.accountConfigured = false;
+        this.accountUser = null;
 
         // Execution state tracking for interrupt support
         this.isExecuting = false;
@@ -56,6 +61,7 @@ class SingleCellAnalysis {
         this.setupFileUpload();
         this.setupNavigation();
         this.setupThemeToggle();
+        this.setupAccountCenter();
         this.setupGeneAutocomplete();
         this.setupBeforeUnloadWarning();
         this.setupNotebookManager();

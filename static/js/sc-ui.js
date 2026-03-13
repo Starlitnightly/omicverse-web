@@ -763,6 +763,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const codeView     = document.getElementById('code-editor-view');
         const agentView    = document.getElementById('agent-view');
         const skillsView   = document.getElementById('skills-view');
+        const accountView  = document.getElementById('account-view');
         const termView     = document.getElementById('terminal-view');
         const vizBtn       = document.getElementById('view-viz-btn');
         const codeBtn      = document.getElementById('view-code-btn');
@@ -775,6 +776,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const breadcrumbTitle = document.getElementById('breadcrumb-title');
         const analysisNav  = document.getElementById('analysis-nav');
         const agentConfigNav = document.getElementById('agent-config-nav');
+        const skillsStoreNav = document.getElementById('skills-store-nav');
         const fileManager  = document.getElementById('file-manager');
         const termNavPanel = document.getElementById('term-nav-panel');
         const navbarContent = document.querySelector('.navbar-content');
@@ -789,12 +791,13 @@ Object.assign(SingleCellAnalysis.prototype, {
         };
 
         // Hide all views first
-        [vizView, codeView, agentView, skillsView, termView].forEach(v => { if (v) v.style.display = 'none'; });
+        [vizView, codeView, agentView, skillsView, accountView, termView].forEach(v => { if (v) v.style.display = 'none'; });
         _deactivateAll();
         if (vizToolbar)    vizToolbar.style.display    = 'none';
         if (codeToolbarRow) codeToolbarRow.style.display = 'none';
         if (analysisNav)   analysisNav.style.display   = 'none';
         if (agentConfigNav) agentConfigNav.style.display = 'none';
+        if (skillsStoreNav) skillsStoreNav.style.display = 'none';
         if (fileManager)   fileManager.style.display   = 'none';
         // Hide terminal nav panel and restore navbar-content for non-terminal views
         if (termNavPanel)  termNavPanel.style.display  = 'none';
@@ -864,10 +867,16 @@ Object.assign(SingleCellAnalysis.prototype, {
         } else if (view === 'skills') {
             if (skillsView) skillsView.style.display = 'block';
             if (skillsBtn)  { skillsBtn.classList.remove('btn-outline-primary'); skillsBtn.classList.add('btn-primary'); }
+            if (skillsStoreNav) skillsStoreNav.style.display = 'block';
 
             if (pageTitle) pageTitle.innerHTML = `<i class="feather-grid me-2"></i>${this.t('view.skillsTitle')}`;
             if (breadcrumbTitle) breadcrumbTitle.textContent = this.t('view.skillsTitle');
             this.loadSkills();
+        } else if (view === 'account') {
+            if (accountView) accountView.style.display = 'block';
+            if (pageTitle) pageTitle.innerHTML = `<i class="feather-user me-2"></i>${this.t('view.accountTitle')}`;
+            if (breadcrumbTitle) breadcrumbTitle.textContent = this.t('breadcrumb.account');
+            if (this.renderAccountCenter) this.renderAccountCenter();
         }
     },
 
@@ -883,9 +892,14 @@ Object.assign(SingleCellAnalysis.prototype, {
                     throw new Error(data.error);
                 }
                 this.skills = Array.isArray(data.skills) ? data.skills : [];
-                this.filteredSkills = [...this.skills];
+                this.localSkillCount = Number(data.local_count || 0);
+                this.onlineSkillCount = Number(data.online_count || 0);
                 this.skillsLoaded = true;
-                this.renderSkills();
+                if (data.online_error) {
+                    this.showStatus(`${this.t('skills.onlineLoadFailed')}: ${data.online_error}`, false);
+                }
+                const searchInput = document.getElementById('skills-search-input');
+                this.filterSkills(searchInput ? searchInput.value : '');
             })
             .catch(error => {
                 const grid = document.getElementById('skills-store-grid');
@@ -906,6 +920,24 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.loadSkills(true);
     },
 
+    getSkillsSourceFilter() {
+        if (!this.skillsSourceFilter) {
+            this.skillsSourceFilter = localStorage.getItem('omicverse.skillsSourceFilter') || 'all';
+        }
+        if (!['all', 'local', 'online'].includes(this.skillsSourceFilter)) {
+            this.skillsSourceFilter = 'all';
+        }
+        return this.skillsSourceFilter;
+    },
+
+    setSkillsSourceFilter(source) {
+        const next = ['all', 'local', 'online'].includes(source) ? source : 'all';
+        this.skillsSourceFilter = next;
+        localStorage.setItem('omicverse.skillsSourceFilter', next);
+        const searchInput = document.getElementById('skills-search-input');
+        this.filterSkills(searchInput ? searchInput.value : '');
+    },
+
     getSkillsLayout() {
         if (!this.skillsLayout) {
             this.skillsLayout = localStorage.getItem('omicverse.skillsLayout') || 'card';
@@ -922,22 +954,32 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     filterSkills(query = '') {
         const term = String(query || '').trim().toLowerCase();
-        if (!term) {
-            this.filteredSkills = [...this.skills];
-        } else {
-            this.filteredSkills = this.skills.filter(skill => {
-                const haystack = [
-                    skill.name,
-                    skill.slug,
-                    skill.description,
-                    skill.root_label,
-                    skill.relative_path,
-                    skill.reference_excerpt,
-                    skill.reference_relative_path,
-                ].join(' ').toLowerCase();
-                return haystack.includes(term);
-            });
-        }
+        const sourceFilter = this.getSkillsSourceFilter();
+        this.filteredSkills = this.skills.filter(skill => {
+            const source = skill && skill.source === 'online' ? 'online' : 'local';
+            if (sourceFilter !== 'all' && source !== sourceFilter) {
+                return false;
+            }
+            if (!term) {
+                return true;
+            }
+            const haystack = [
+                skill.name,
+                skill.slug,
+                skill.description,
+                skill.summary,
+                skill.root_label,
+                skill.relative_path,
+                skill.reference_excerpt,
+                skill.reference_relative_path,
+                skill.author,
+                skill.package_name,
+                skill.install_command,
+                Array.isArray(skill.tags) ? skill.tags.join(' ') : '',
+                skill.source,
+            ].join(' ').toLowerCase();
+            return haystack.includes(term);
+        });
         this.renderSkills();
     },
 
@@ -946,16 +988,29 @@ Object.assign(SingleCellAnalysis.prototype, {
         const meta = document.getElementById('skills-store-meta');
         const cardBtn = document.getElementById('skills-layout-card-btn');
         const listBtn = document.getElementById('skills-layout-list-btn');
+        const allBtn = document.getElementById('skills-source-all-btn');
+        const localBtn = document.getElementById('skills-source-local-btn');
+        const onlineBtn = document.getElementById('skills-source-online-btn');
+        const allCount = document.getElementById('skills-source-all-count');
+        const localCount = document.getElementById('skills-source-local-count');
+        const onlineCount = document.getElementById('skills-source-online-count');
         if (!grid) return;
         const layout = this.getSkillsLayout();
+        const sourceFilter = this.getSkillsSourceFilter();
 
         grid.classList.toggle('list', layout === 'list');
         if (cardBtn) cardBtn.classList.toggle('active', layout === 'card');
         if (listBtn) listBtn.classList.toggle('active', layout === 'list');
+        if (allBtn) allBtn.classList.toggle('active', sourceFilter === 'all');
+        if (localBtn) localBtn.classList.toggle('active', sourceFilter === 'local');
+        if (onlineBtn) onlineBtn.classList.toggle('active', sourceFilter === 'online');
+        if (allCount) allCount.textContent = String(Array.isArray(this.skills) ? this.skills.length : 0);
+        if (localCount) localCount.textContent = String(this.localSkillCount || 0);
+        if (onlineCount) onlineCount.textContent = String(this.onlineSkillCount || 0);
 
         const skills = Array.isArray(this.filteredSkills) ? this.filteredSkills : [];
         if (meta) {
-            meta.textContent = `${skills.length} / ${this.skills.length} skills`;
+            meta.textContent = `${skills.length} / ${this.skills.length} · ${this.t('skills.local')}: ${this.localSkillCount || 0} · ${this.t('skills.online')}: ${this.onlineSkillCount || 0}`;
         }
         if (!skills.length) {
             grid.innerHTML = `
@@ -976,11 +1031,16 @@ Object.assign(SingleCellAnalysis.prototype, {
             .replace(/"/g, '&quot;');
 
         const skillButtonLabel = (skill) => skill && skill.editable === false
-            ? this.t('skills.viewSkill')
+            ? (skill.source === 'online' ? this.t('skills.viewDetail') : this.t('skills.viewSkill'))
             : this.t('skills.modifySkill');
-        const referenceButtonLabel = (skill) => skill && skill.editable === false
-            ? this.t('skills.viewReference')
-            : this.t('skills.modifyReference');
+        const referenceButtonLabel = (skill) => {
+            if (skill && skill.source === 'online') {
+                return this.t('skills.openHomepage');
+            }
+            return skill && skill.editable === false
+                ? this.t('skills.viewReference')
+                : this.t('skills.modifyReference');
+        };
         const buildReferenceBlock = (skill) => {
             if (layout === 'list') {
                 return '';
@@ -1009,11 +1069,14 @@ Object.assign(SingleCellAnalysis.prototype, {
                             <h3 class="skill-card-title">${esc(skill.name)}</h3>
                             <div class="skill-card-slug">${esc(skill.slug)}</div>
                         </div>
-                        <span class="skill-chip primary">${esc(skill.root_label || this.t('skills.location'))}</span>
+                        <span class="skill-chip primary">${esc(skill.source === 'online' ? this.t('skills.online') : (skill.root_label || this.t('skills.location')))}</span>
                     </div>
                     <p class="skill-card-desc">${esc(skill.description || 'No description provided.')}</p>
                     <div class="skill-card-meta">
                         <span class="skill-chip">${this.t('skills.path')}: ${esc(skill.relative_path || 'SKILL.md')}</span>
+                        ${skill.author ? `<span class="skill-chip">${this.t('skills.author')}: ${esc(skill.author)}</span>` : ''}
+                        ${skill.package_name ? `<span class="skill-chip">${this.t('skills.package')}: ${esc(skill.package_name)}</span>` : ''}
+                        ${Array.isArray(skill.tags) && skill.tags.length ? `<span class="skill-chip">${this.t('skills.tags')}: ${esc(skill.tags.join(', '))}</span>` : ''}
                         ${layout !== 'list' && skill.reference_relative_path ? `<span class="skill-chip">${this.t('skills.reference')}: ${esc(skill.reference_relative_path)}</span>` : ''}
                         ${skill.version ? `<span class="skill-chip">${this.t('skills.version')}: ${esc(skill.version)}</span>` : ''}
                         ${skill.editable === false ? `<span class="skill-chip muted">${this.t('skills.readOnly')}</span>` : ''}
@@ -1025,15 +1088,28 @@ Object.assign(SingleCellAnalysis.prototype, {
                     <button
                         type="button"
                         class="btn btn-sm btn-primary"
-                        onclick="singleCellApp.editSkill(decodeURIComponent('${encodeURIComponent(String(skill.path || ''))}'))">
+                        onclick="${skill.source === 'online'
+                            ? `singleCellApp.viewRemoteSkill(decodeURIComponent('${encodeURIComponent(String(skill.remote_slug || skill.slug || ''))}'))`
+                            : `singleCellApp.editSkill(decodeURIComponent('${encodeURIComponent(String(skill.path || ''))}'))`}">
                         <i class="feather-edit-3 me-1"></i>${skillButtonLabel(skill)}
                     </button>
+                    ${skill.source === 'online'
+                        ? (skill.homepage_url ? `
+                    <button
+                        type="button"
+                        class="btn btn-sm btn-outline-primary"
+                        onclick="singleCellApp.openExternalLink(decodeURIComponent('${encodeURIComponent(String(skill.homepage_url || ''))}'))">
+                        <i class="feather-external-link me-1"></i>${referenceButtonLabel(skill)}
+                    </button>
+                    ` : '')
+                        : `
                     <button
                         type="button"
                         class="btn btn-sm btn-outline-primary"
                         onclick="singleCellApp.editSkillReference(decodeURIComponent('${encodeURIComponent(String(skill.path || ''))}'))">
                         <i class="feather-file-text me-1"></i>${referenceButtonLabel(skill)}
                     </button>
+                    `}
                 </div>
             </article>
         `).join('');
@@ -1173,6 +1249,38 @@ Object.assign(SingleCellAnalysis.prototype, {
         .catch(error => {
             alert(`${this.t('status.openFailed')}: ${error.message}`);
         });
+    },
+
+    viewRemoteSkill(slug) {
+        if (!slug) return;
+        fetch('/api/skills/open_remote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            if (this.openSkillTab) {
+                this.openSkillTab({
+                    name: data.filename || `${slug}.md`,
+                    path: data.path,
+                    content: data.content || '',
+                    editable: false,
+                });
+            }
+            this.switchView('code');
+        })
+        .catch(error => {
+            alert(`${this.t('status.openFailed')}: ${error.message}`);
+        });
+    },
+
+    openExternalLink(url) {
+        if (!url) return;
+        window.open(url, '_blank', 'noopener,noreferrer');
     },
 
     applyCodeFontSize() {
