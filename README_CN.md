@@ -74,6 +74,22 @@ python3 app.py
 - 首页: `http://localhost:5050/`
 - 分析页: `http://localhost:5050/analysis`
 
+## 3.1 在线 Skill Store 与个人中心
+
+`omicverse-web` 可以通过代理接入独立的 skill/account 服务。
+
+设置：
+
+```bash
+export OV_SKILL_STORE_URL=http://127.0.0.1:5060
+```
+
+启用后：
+
+- `Skill Store` 会合并展示本地 skill 与在线 skill
+- 右上角个人中心支持注册、登录和资料维护
+- 分析、上传、Notebook、终端、绘图等主流程仍然保持匿名可用，不受登录影响
+
 ## 4. 主要路由与 API（节选）
 
 页面路由：
@@ -98,6 +114,8 @@ python3 app.py
 - `/api`（data）
 - `/api/notebooks`
 - `/api/terminal`
+- `/api/skills`
+- `/api/account`
 
 ## 5. 开发说明
 

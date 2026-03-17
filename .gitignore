@@ -1,6 +1,22 @@
-*.pyc
-__pycache__/*
-routes/__pycache__/*
-routes/*.pyc
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
 .DS_Store
-*.DS_Store
+
+# Frontend package manager caches
+node_modules/
+.yarn/cache/*
+.yarn/install-state.gz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript build state
+*.tsbuildinfo
+
+# omicverse-notebook local build artifacts
+/omicverse-notebook/dist/
+/omicverse-notebook/lib/
+/omicverse-notebook/omicverse_notebook/__pycache__/

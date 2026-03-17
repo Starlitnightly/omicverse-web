@@ -98,6 +98,22 @@ python3 start_server.py --host 127.0.0.1 --port 5050 --no-debug
 
 If using your KohakuRiver workflow, use its forward command with the same remote port.
 
+## 3.2 Online Skill Store + Personal Center
+
+`omicverse-web` can optionally proxy to the standalone skill/account service.
+
+Set:
+
+```bash
+export OV_SKILL_STORE_URL=http://127.0.0.1:5060
+```
+
+With that enabled:
+
+- `Skill Store` merges local skills with online catalog entries
+- the top-right personal center supports register/login/profile
+- analysis, upload, notebook, terminal, and plotting remain anonymous and unaffected
+
 ## 4. Main Routes and APIs (selected)
 
 Page routes:
@@ -122,6 +138,8 @@ Registered Blueprint prefixes:
 - `/api` (data)
 - `/api/notebooks`
 - `/api/terminal`
+- `/api/skills`
+- `/api/account`
 
 ## 5. Development Notes
 
