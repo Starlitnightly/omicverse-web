@@ -65,6 +65,16 @@ def update_profile():
     return jsonify(data), status
 
 
+@bp.route("/resend-activation", methods=["POST"])
+def resend_activation():
+    data, status = request_remote_json(
+        "/api/v1/auth/resend-activation",
+        method="POST",
+        payload=request.get_json(silent=True) or {},
+    )
+    return jsonify(data), status
+
+
 @bp.route("/logout", methods=["POST"])
 def logout():
     token = _bearer_token()

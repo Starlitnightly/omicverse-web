@@ -897,6 +897,67 @@ html.app-skin-dark .skills-empty-state {
   color: #e2e8f0;
 }
 
+.skills-auth-gate {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  padding: 2.5rem 2rem;
+  border: 1px dashed rgba(11, 122, 39, 0.22);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(236, 244, 238, 0.72), rgba(255, 255, 255, 0.94));
+  text-align: center;
+}
+
+.skills-auth-gate-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: rgba(11, 122, 39, 0.08);
+  margin-bottom: 1.25rem;
+  font-size: 2rem;
+  color: #0b7a27;
+}
+
+.skills-auth-gate h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.skills-auth-gate p {
+  color: #64748b;
+  margin-bottom: 1.5rem;
+  max-width: 380px;
+}
+
+.skills-auth-gate-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+html.app-skin-dark .skills-auth-gate {
+  border-color: rgba(34, 197, 94, 0.24);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(17, 24, 39, 0.98));
+  color: #e2e8f0;
+}
+
+html.app-skin-dark .skills-auth-gate p {
+  color: #94a3b8;
+}
+
+html.app-skin-dark .skills-auth-gate-icon {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+
 html.app-skin-dark .skills-empty-icon {
   background: rgba(34, 197, 94, 0.14);
   color: #86efac;

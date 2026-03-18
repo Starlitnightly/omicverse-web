@@ -10,8 +10,11 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
+DEFAULT_SKILL_STORE_URL = "https://skills.omicverse.com"
+
+
 def remote_store_base_url() -> str:
-    return str(os.environ.get("OV_SKILL_STORE_URL") or "").strip().rstrip("/")
+    return str(os.environ.get("OV_SKILL_STORE_URL") or DEFAULT_SKILL_STORE_URL).strip().rstrip("/")
 
 
 def remote_store_enabled() -> bool:

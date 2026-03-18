@@ -204,8 +204,66 @@ Object.assign(SingleCellAnalysis.prototype, {
         box.style.display = '';
     },
 
+    showResendButton(email) {
+        this._resendEmail = email;
+        const wrap = document.getElementById('account-resend-wrap');
+        if (wrap) wrap.style.display = '';
+        this._startResendCooldown();
+    },
+
+    hideResendButton() {
+        const wrap = document.getElementById('account-resend-wrap');
+        if (wrap) wrap.style.display = 'none';
+        if (this._resendTimer) {
+            clearInterval(this._resendTimer);
+            this._resendTimer = null;
+        }
+    },
+
+    _startResendCooldown() {
+        const btn = document.getElementById('account-resend-btn');
+        if (!btn) return;
+        let remaining = 60;
+        btn.disabled = true;
+        btn.textContent = `Resend activation email (${remaining}s)`;
+        if (this._resendTimer) clearInterval(this._resendTimer);
+        this._resendTimer = setInterval(() => {
+            remaining -= 1;
+            if (remaining <= 0) {
+                clearInterval(this._resendTimer);
+                this._resendTimer = null;
+                btn.disabled = false;
+                btn.textContent = 'Resend activation email';
+            } else {
+                btn.textContent = `Resend activation email (${remaining}s)`;
+            }
+        }, 1000);
+    },
+
+    async resendActivation() {
+        const email = this._resendEmail || document.getElementById('account-login-email')?.value?.trim() || '';
+        if (!email) {
+            this.showAccountMessage('account-auth-message', 'Please enter your email address first.');
+            return;
+        }
+        this._startResendCooldown();
+        try {
+            const response = await fetch('/api/account/resend-activation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const data = await response.json();
+            this.showAccountMessage('account-auth-message',
+                data.message || 'Activation email sent. Please check your inbox.', 'success');
+        } catch (_) {
+            this.showAccountMessage('account-auth-message', 'Failed to resend. Please try again later.');
+        }
+    },
+
     openAuthModal(mode = 'login') {
         this.closeAccountMenu();
+        this.hideResendButton();
         this.showAccountMessage(
             'account-auth-message',
             this.accountConfigured ? '' : this.t('account.serverOffline'),
@@ -385,7 +443,13 @@ Object.assign(SingleCellAnalysis.prototype, {
             });
             const data = await response.json();
             if (!response.ok || data.error) {
-                throw new Error(data.error || this.t('account.loginFailed'));
+                const msg = data.error || this.t('account.loginFailed');
+                if (data.email_verification_required) {
+                    this.showAccountMessage('account-auth-message', msg, 'warning');
+                    this.showResendButton(email);
+                    return;
+                }
+                throw new Error(msg);
             }
             this.setAccountToken(data.token || '');
             this.accountUser = data.user || null;
@@ -395,6 +459,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
             }
+            this.skillsLoaded = false;
             this.openAccountCenter(false);
             this.showStatus(this.t('account.loginSuccess'), false);
         } catch (error) {
@@ -423,6 +488,13 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (!response.ok || data.error) {
                 throw new Error(data.error || this.t('account.registerFailed'));
             }
+            // Email verification required — no token issued yet
+            if (data.email_verification_required) {
+                this.showAccountMessage('account-auth-message',
+                    data.message || 'Please check your email to activate your account.', 'success');
+                this.showResendButton(email);
+                return;
+            }
             this.setAccountToken(data.token || '');
             this.accountUser = data.user || null;
             this.cacheAccountProfile(this.accountUser);
@@ -431,6 +503,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
             }
+            this.skillsLoaded = false;
             this.openAccountCenter(true);
             this.showStatus(this.t('account.registerSuccess'), false);
         } catch (error) {
@@ -502,6 +575,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.accountUser = null;
         this.cacheAccountProfile(null);
         this.accountCenterEditable = false;
+        this.skillsLoaded = false;
         this.updateAccountMenu();
         if (this.currentView === 'account' && this.switchView) {
             this.switchView('visualization');

@@ -233,6 +233,13 @@ def _remote_skill_entry(payload: Dict[str, object]) -> Dict[str, object]:
     }
 
 
+def _read_bearer_token() -> str:
+    header = str(request.headers.get("Authorization") or "")
+    if not header.lower().startswith("bearer "):
+        return ""
+    return header.split(" ", 1)[1].strip()
+
+
 def _fetch_remote_skills() -> tuple[List[Dict[str, object]], str]:
     if not remote_store_enabled():
         return [], ""
@@ -282,7 +289,12 @@ def list_skills():
         _skill_entry_from_metadata(slug, metadata)
         for slug, metadata in sorted(registry.skill_metadata.items(), key=lambda item: item[0].lower())
     ]
-    remote_items, remote_error = _fetch_remote_skills()
+    bearer_token = _read_bearer_token()
+    online_requires_auth = remote_store_enabled() and not bearer_token
+    if online_requires_auth:
+        remote_items, remote_error = [], ""
+    else:
+        remote_items, remote_error = _fetch_remote_skills()
     builtin_roots = [{"label": label, "path": str(root)} for label, root in _builtin_skill_roots()]
     return jsonify(
         {
@@ -290,6 +302,7 @@ def list_skills():
             "local_count": len(local_items),
             "online_count": len(remote_items),
             "online_enabled": remote_store_enabled(),
+            "online_requires_auth": online_requires_auth,
             "online_error": remote_error,
             "workspace_root": str(_workspace_skill_root()),
             "builtin_root": str(_builtin_skill_root()),

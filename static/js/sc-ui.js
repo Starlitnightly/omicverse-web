@@ -885,7 +885,8 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.renderSkills();
             return;
         }
-        fetch('/api/skills/list')
+        const headers = this.getAccountHeaders ? this.getAccountHeaders() : {};
+        fetch('/api/skills/list', { headers })
             .then(response => response.json())
             .then(data => {
                 if (data.error) {
@@ -894,6 +895,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 this.skills = Array.isArray(data.skills) ? data.skills : [];
                 this.localSkillCount = Number(data.local_count || 0);
                 this.onlineSkillCount = Number(data.online_count || 0);
+                this.onlineRequiresAuth = !!data.online_requires_auth;
                 this.skillsLoaded = true;
                 if (data.online_error) {
                     this.showStatus(`${this.t('skills.onlineLoadFailed')}: ${data.online_error}`, false);
@@ -998,6 +1000,29 @@ Object.assign(SingleCellAnalysis.prototype, {
         const layout = this.getSkillsLayout();
         const sourceFilter = this.getSkillsSourceFilter();
 
+        // Show auth gate when user is not logged in and tries to view online skills
+        if (sourceFilter === 'online' && this.onlineRequiresAuth) {
+            grid.classList.remove('list');
+            grid.innerHTML = `
+                <div class="skills-auth-gate">
+                    <div class="skills-auth-gate-icon"><i class="feather-lock"></i></div>
+                    <h3>登录 / 注册以访问在线技能商店 · Sign in to Access the Online Store</h3>
+                    <p>注册账户，即可获取在线技能商店的完整内容。<br>
+                    Create an account to access the online skill store.</p>
+                    <div class="skills-auth-gate-actions">
+                        <button type="button" class="btn btn-primary" onclick="singleCellApp.openAuthModal('login')">
+                            <i class="feather-log-in me-1"></i>登录
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="singleCellApp.openAuthModal('register')">
+                            <i class="feather-user-plus me-1"></i>注册账户
+                        </button>
+                    </div>
+                </div>
+            `;
+            if (window.feather) feather.replace({ 'stroke-width': 2 });
+            return;
+        }
+
         grid.classList.toggle('list', layout === 'list');
         if (cardBtn) cardBtn.classList.toggle('active', layout === 'card');
         if (listBtn) listBtn.classList.toggle('active', layout === 'list');
@@ -1011,6 +1036,19 @@ Object.assign(SingleCellAnalysis.prototype, {
         const skills = Array.isArray(this.filteredSkills) ? this.filteredSkills : [];
         if (meta) {
             meta.textContent = `${skills.length} / ${this.skills.length} · ${this.t('skills.local')}: ${this.localSkillCount || 0} · ${this.t('skills.online')}: ${this.onlineSkillCount || 0}`;
+        }
+        if (!skills.length && sourceFilter === 'online') {
+            grid.classList.remove('list');
+            grid.innerHTML = `
+                <div class="skills-auth-gate">
+                    <div class="skills-auth-gate-icon"><i class="feather-clock"></i></div>
+                    <h3>在线技能商店即将推出 · Coming Soon</h3>
+                    <p>每一个技能都经过验证，而不是从网上随意收集，敬请期待。<br>
+                    Every skill is carefully verified — not scraped from the web. Stay tuned.</p>
+                </div>
+            `;
+            if (window.feather) feather.replace({ 'stroke-width': 2 });
+            return;
         }
         if (!skills.length) {
             grid.innerHTML = `
