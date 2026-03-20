@@ -180,6 +180,15 @@ def upload_file_preview():
         return jsonify({'error': str(e)}), 500
 
 
+def _resolve_h5ad_path(raw_path, file_root):
+    """Accept either an absolute path or a relative path (relative to file_root)."""
+    from pathlib import Path as _Path
+    p = _Path(raw_path)
+    if p.is_absolute():
+        return p.resolve()
+    return resolve_browse_path(file_root, raw_path)
+
+
 @bp.route('/load_from_server', methods=['POST'])
 def load_from_server():
     """Load h5ad file from a server-side path (analysis/full mode)."""
@@ -189,7 +198,7 @@ def load_from_server():
         return jsonify({'error': 'No path provided'}), 400
 
     try:
-        target = resolve_browse_path(bp.state.file_root, rel_path)
+        target = _resolve_h5ad_path(rel_path, bp.state.file_root)
     except ValueError:
         return jsonify({'error': 'Invalid path'}), 400
 
@@ -250,7 +259,7 @@ def load_preview_from_server():
         return jsonify({'error': 'No path provided'}), 400
 
     try:
-        target = resolve_browse_path(bp.state.file_root, rel_path)
+        target = _resolve_h5ad_path(rel_path, bp.state.file_root)
     except ValueError:
         return jsonify({'error': 'Invalid path'}), 400
 

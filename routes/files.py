@@ -8,6 +8,7 @@ import logging
 import base64
 import mimetypes
 import shutil
+from pathlib import Path
 from flask import Blueprint, request, jsonify
 
 from utils.file_helpers import (
@@ -47,8 +48,13 @@ def list_files():
             continue
 
     entries.sort(key=lambda x: (0 if x['type'] == 'dir' else 1, x['name'].lower()))
-    rel = '' if target == bp.file_root else str(target.relative_to(bp.file_root))
-    parent = '' if target == bp.file_root else str(target.parent.relative_to(bp.file_root))
+    if target == bp.file_root:
+        rel, parent = '', ''
+    else:
+        rel = str(target.relative_to(bp.file_root))
+        p = target.parent
+        # When parent IS file_root, relative_to() returns '.' — normalise to ''
+        parent = '' if p == bp.file_root else str(p.relative_to(bp.file_root))
 
     return jsonify({
         'path': rel,
@@ -56,6 +62,47 @@ def list_files():
         'entries': entries,
         'root_abs': str(bp.file_root),          # absolute server root (for display)
         'current_abs': str(target),              # absolute current dir (for display)
+    })
+
+
+@bp.route('/list_abs', methods=['GET'])
+def list_files_abs():
+    """List files at an absolute path (no file_root restriction). Used by the server file browser modal."""
+    abs_path = request.args.get('abspath', '').strip()
+    if abs_path:
+        target = Path(abs_path).resolve()
+    else:
+        target = bp.file_root  # default: open at working directory
+
+    if not target.exists() or not target.is_dir():
+        return jsonify({'error': 'Directory not found'}), 404
+
+    entries = []
+    try:
+        for entry in target.iterdir():
+            try:
+                entries.append({
+                    'name': entry.name,
+                    'type': 'dir' if entry.is_dir() else 'file',
+                    'size': entry.stat().st_size if entry.is_file() else None,
+                    'ext': entry.suffix.lower() if entry.is_file() else None,
+                })
+            except Exception:
+                continue
+    except PermissionError:
+        return jsonify({'error': 'Permission denied'}), 403
+
+    entries.sort(key=lambda x: (0 if x['type'] == 'dir' else 1, x['name'].lower()))
+
+    parent = target.parent
+    is_fs_root = (target == parent)  # True when already at filesystem root
+
+    return jsonify({
+        'current_abs': str(target),
+        'parent_abs': '' if is_fs_root else str(parent),
+        'file_root_abs': str(bp.file_root),
+        'is_fs_root': is_fs_root,
+        'entries': entries,
     })
 
 

@@ -24,3 +24,4 @@ yarn-error.log*
 
 dist/
 omicverseweb.egg-info/
+data/

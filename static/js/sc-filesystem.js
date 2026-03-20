@@ -125,15 +125,20 @@ Object.assign(SingleCellAnalysis.prototype, {
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body p-0">
-                        <div id="server-browser-abs-path"
-                             class="text-muted px-2 py-1"
-                             style="font-size:0.75rem;background:var(--bs-light,#f8f9fa);word-break:break-all;font-family:monospace;border-bottom:1px solid var(--bs-border-color,#dee2e6);"></div>
-                        <div id="server-browser-back-row" style="display:none;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
-                            <div id="server-browser-back-btn"
-                                 class="d-flex align-items-center px-2 py-1 small"
+                        <div class="d-flex align-items-center px-2 py-1"
+                             style="background:var(--bs-light,#f8f9fa);border-bottom:1px solid var(--bs-border-color,#dee2e6);">
+                            <i class="feather-folder text-muted me-2" style="font-size:.85rem;flex-shrink:0;"></i>
+                            <input id="server-browser-path-input" type="text"
+                                   class="form-control form-control-sm border-0 bg-transparent p-0 shadow-none"
+                                   style="font-size:0.75rem;font-family:monospace;"
+                                   placeholder="输入路径后按 Enter 跳转…" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div id="server-browser-back-row"
+                             style="display:none;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
+                            <div class="d-flex align-items-center px-2 py-1 small server-browser-back-btn"
                                  style="cursor:pointer;user-select:none;">
                                 <i class="feather-arrow-left me-2 text-muted" style="font-size:.85rem;"></i>
-                                <span class="text-muted">返回上层</span>
+                                <span class="text-muted" data-i18n="file.goUp">返回上层</span>
                             </div>
                         </div>
                         <div style="max-height:52vh;overflow-y:auto;">
@@ -147,6 +152,8 @@ Object.assign(SingleCellAnalysis.prototype, {
                     </div>
                 </div>
             </div>`;
+
+        // Load button
         div.querySelector('#server-browser-load-btn').addEventListener('click', () => {
             const path = this._serverBrowserSelectedPath;
             const mode = div.dataset.mode;
@@ -154,38 +161,65 @@ Object.assign(SingleCellAnalysis.prototype, {
             bootstrap.Modal.getInstance(div)?.hide();
             this.loadH5adFromServer(path, mode);
         });
+
+        // Editable path input: press Enter to navigate
+        div.querySelector('#server-browser-path-input').addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            const typed = e.target.value.trim();
+            const rel = this._absToServerRelPath(typed);
+            this._loadServerBrowserPath(rel);
+        });
+
         return div;
     },
 
-    _loadServerBrowserPath(relPath) {
-        const listEl = document.getElementById('server-browser-list');
-        const absPathEl = document.getElementById('server-browser-abs-path');
-        const backRow = document.getElementById('server-browser-back-row');
-        const backBtn = document.getElementById('server-browser-back-btn');
+    // Navigate the server file browser to an absolute path (empty = default to file_root).
+    _loadServerBrowserPath(absPath) {
+        const listEl   = document.getElementById('server-browser-list');
+        const pathInput = document.getElementById('server-browser-path-input');
+        const backRow  = document.getElementById('server-browser-back-row');
         if (!listEl) return;
         listEl.innerHTML = `<div class="text-muted small p-2">${this.t('common.loading') || '加载中…'}</div>`;
-        const url = new URL('/api/files/list', window.location.origin);
-        if (relPath) url.searchParams.set('path', relPath);
+
+        const url = new URL('/api/files/list_abs', window.location.origin);
+        if (absPath) url.searchParams.set('abspath', absPath);
+
         fetch(url.toString())
             .then(r => r.json())
             .then(data => {
-                if (data.error) { listEl.textContent = data.error; return; }
-                if (absPathEl) {
-                    const display = data.current_abs || data.root_abs || '';
-                    absPathEl.textContent = display ? `📂 ${display}` : '';
+                if (data.error) {
+                    listEl.innerHTML = `<div class="text-danger small p-2">${data.error}</div>`;
+                    return;
                 }
-                // Show/hide back button and wire it up
-                if (backRow) backRow.style.display = data.path ? '' : 'none';
-                if (backBtn) {
-                    const newBtn = backBtn.cloneNode(true); // remove old listeners
-                    backBtn.parentNode.replaceChild(newBtn, backBtn);
-                    newBtn.addEventListener('click', () => this._loadServerBrowserPath(data.parent || ''));
-                    newBtn.addEventListener('mouseenter', () => newBtn.classList.add('bg-light'));
-                    newBtn.addEventListener('mouseleave', () => newBtn.classList.remove('bg-light'));
+
+                // Update editable path input
+                if (pathInput) pathInput.value = data.current_abs || '';
+
+                // Back button: disabled at filesystem root
+                if (backRow) {
+                    backRow.style.display = 'block';
+                    const btn = backRow.querySelector('.server-browser-back-btn');
+                    if (btn) {
+                        if (data.is_fs_root) {
+                            btn.style.opacity = '0.4';
+                            btn.style.cursor = 'default';
+                            btn.onclick = null;
+                            btn.onmouseenter = null;
+                            btn.onmouseleave = null;
+                        } else {
+                            btn.style.opacity = '';
+                            btn.style.cursor = 'pointer';
+                            btn.onclick = () => this._loadServerBrowserPath(data.parent_abs);
+                            btn.onmouseenter = () => btn.classList.add('bg-light');
+                            btn.onmouseleave = () => btn.classList.remove('bg-light');
+                        }
+                    }
                 }
-                this._renderServerBrowserList(listEl, data.entries || [], data.path || '', data.parent || '');
+
+                this._renderServerBrowserList(listEl, data.entries || [], data.current_abs, data.parent_abs || '');
             })
-            .catch(err => { listEl.textContent = err.message; });
+            .catch(err => { listEl.innerHTML = `<div class="text-danger small p-2">${err.message}</div>`; });
     },
 
     _renderServerBrowserList(container, entries, currentPath, parentPath) {
@@ -215,13 +249,20 @@ Object.assign(SingleCellAnalysis.prototype, {
 
             if (isDir) {
                 item.addEventListener('click', () => {
-                    const next = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                    // currentPath is now an absolute path
+                    const sep = currentPath.includes('\\') ? '\\' : '/';
+                    const next = currentPath.endsWith(sep)
+                        ? currentPath + entry.name
+                        : currentPath + sep + entry.name;
                     this._loadServerBrowserPath(next);
                 });
                 item.addEventListener('mouseenter', () => item.classList.add('bg-light'));
                 item.addEventListener('mouseleave', () => item.classList.remove('bg-light'));
             } else if (isH5ad) {
-                const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                const sep = currentPath.includes('\\') ? '\\' : '/';
+                const filePath = currentPath.endsWith(sep)
+                    ? currentPath + entry.name
+                    : currentPath + sep + entry.name;
                 const select = () => {
                     container.querySelectorAll('.sb-selected').forEach(el => {
                         el.classList.remove('sb-selected', 'bg-primary');
