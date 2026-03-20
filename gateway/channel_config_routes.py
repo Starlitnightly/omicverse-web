@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, has_app_context, jsonify, request
 
 channel_config_bp = Blueprint("channel_config", __name__)
 
@@ -218,6 +218,12 @@ def _read_api_key() -> str:
         except Exception:
             pass
     return os.environ.get("OPENAI_API_KEY", "")
+
+
+def _get_channel_manager():
+    if not has_app_context():
+        return None
+    return current_app.config.get("GATEWAY_CHANNEL_MANAGER")
 
 
 def _write_api_key(key: str) -> None:
@@ -440,10 +446,18 @@ def _stop_channel_process(channel: str, proc: subprocess.Popen, *, timeout: floa
 def list_channel_states() -> list[dict]:
     """Return a snapshot of all supported channel states."""
     cfg = _read_config()
+    manager = _get_channel_manager()
+    if manager is not None:
+        managed = {item.get("channel"): dict(item) for item in manager.list_states(cfg)}
+    else:
+        managed = {}
     with _PROCESS_LOCK:
         _refresh_channel_states_locked()
         snapshot: list[dict] = []
         for channel in ("telegram", "feishu", "qq", "imessage"):
+            if channel in managed:
+                snapshot.append(managed[channel])
+                continue
             configured = _channel_configured(channel, cfg)
             state = dict(_CHANNEL_STATES.get(channel, {}))
             if not state:
@@ -466,7 +480,15 @@ def auto_start_configured_channels() -> list[dict]:
     cfg = _read_config()
     api_key = _read_api_key()
     results: list[dict] = []
+    manager = _get_channel_manager()
+    if manager is not None:
+        try:
+            results.extend(manager.auto_start_configured(cfg, api_key=api_key))
+        except Exception as exc:
+            results.append({"ok": False, "error": str(exc), "source": "in-process"})
     for channel in ("telegram", "feishu", "qq", "imessage"):
+        if manager is not None and manager.supports(channel):
+            continue
         if not _channel_configured(channel, cfg):
             _set_channel_state(channel, status="not_configured", running=False, configured=False)
             continue
@@ -648,9 +670,15 @@ def test_channel(channel: str):
 
 @channel_config_bp.route("/<channel>/start", methods=["POST"])
 def start_channel(channel: str):
-    """Start a channel bot as a background subprocess."""
+    """Start a channel bot in-process when supported, else as a subprocess."""
     if channel not in ("telegram", "feishu", "qq", "imessage"):
         return jsonify({"ok": False, "error": f"Unknown channel: {channel}"}), 400
+
+    cfg = _read_config()
+    api_key = _read_api_key()
+    manager = _get_channel_manager()
+    if manager is not None and manager.supports(channel):
+        return jsonify(manager.start_channel(channel, cfg=cfg, api_key=api_key, source="manual"))
 
     with _PROCESS_LOCK:
         _refresh_channel_states_locked()
@@ -658,14 +686,15 @@ def start_channel(channel: str):
         if existing and existing.poll() is None:
             return jsonify({"ok": False, "error": f"{channel} is already running (pid={existing.pid})"})
 
-    cfg = _read_config()
-    api_key = _read_api_key()
     result = _start_channel_process(channel, cfg=cfg, api_key=api_key, source="manual")
     return jsonify(result)
 
 
 @channel_config_bp.route("/<channel>/stop", methods=["POST"])
 def stop_channel(channel: str):
+    manager = _get_channel_manager()
+    if manager is not None and manager.supports(channel):
+        return jsonify(manager.stop_channel(channel))
     with _PROCESS_LOCK:
         proc = _PROCESSES.get(channel)
     if proc is None or proc.poll() is not None:
@@ -682,7 +711,17 @@ def stop_channel(channel: str):
 
 @channel_config_bp.route("/<channel>/logs", methods=["GET"])
 def get_channel_logs(channel: str):
-    """Return buffered stdout from the channel subprocess (survives process death)."""
+    """Return buffered logs from the active channel runner."""
+    manager = _get_channel_manager()
+    if manager is not None and manager.supports(channel):
+        states = {item.get("channel"): item for item in list_channel_states()}
+        state = states.get(channel, {})
+        return jsonify({
+            "channel": channel,
+            "running": bool(state.get("running", False)),
+            "logs": manager.get_logs(channel),
+            "mode": "thread",
+        })
     with _PROCESS_LOCK:
         proc = _PROCESSES.get(channel)
     logs = _get_log_buffer(channel)

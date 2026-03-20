@@ -24,6 +24,7 @@ from typing import Optional, Tuple
 
 logger = logging.getLogger("omicverse_web.gateway.server")
 _SHUTDOWN_HOOKS_REGISTERED = False
+_INPROCESS_CHANNEL_MANAGER = None
 
 
 def _register_shutdown_hooks() -> None:
@@ -40,6 +41,12 @@ def _register_shutdown_hooks() -> None:
             stop_all_channel_processes()
         except Exception:
             logger.exception("GatewayServer: failed to stop channel subprocesses")
+        manager = _INPROCESS_CHANNEL_MANAGER
+        if manager is not None:
+            try:
+                manager.stop_all()
+            except Exception:
+                logger.exception("GatewayServer: failed to stop in-process channels")
 
     atexit.register(_cleanup)
 
@@ -81,8 +88,15 @@ def _attach_shared_adata_sync(session_manager, web_state) -> None:
         )
         return
 
+    existing_handler = getattr(session_manager, "_adata_sync_handler", None)
+
+    def _combined_handler(session_id, adata) -> None:  # noqa: ANN001
+        if callable(existing_handler):
+            existing_handler(session_id, adata)
+        setattr(web_state, "current_adata", adata)
+
     try:
-        sync_handler(lambda _session_id, adata: setattr(web_state, "current_adata", adata))
+        sync_handler(_combined_handler)
     except Exception:
         logger.exception("GatewayServer: failed to attach shared AnnData handler")
 
@@ -124,6 +138,7 @@ class GatewayServer:
         port: int = 0,
         session_manager=None,
         channel_registry=None,
+        channel_manager=None,
         memory_db_path: Optional[str] = None,
         channels: Optional[list] = None,
         auto_start_channels: bool = False,
@@ -153,6 +168,8 @@ class GatewayServer:
             logger.warning("GatewayServer.start() called while already running")
             return self._thread, self._url  # type: ignore[return-value]
 
+        global _INPROCESS_CHANNEL_MANAGER
+        _INPROCESS_CHANNEL_MANAGER = channel_manager
         _register_shutdown_hooks()
 
         bind_port = port if port > 0 else get_available_port()
@@ -180,6 +197,8 @@ class GatewayServer:
                     logger.exception("GatewayServer: failed to attach shared AnnData handler")
             if channel_registry is not None:
                 flask_app.config["GATEWAY_CHANNEL_REGISTRY"] = channel_registry
+            if channel_manager is not None:
+                flask_app.config["GATEWAY_CHANNEL_MANAGER"] = channel_manager
             if memory_db_path is not None:
                 flask_app.config["GATEWAY_MEMORY_DB_PATH"] = memory_db_path
             if channels is not None:
