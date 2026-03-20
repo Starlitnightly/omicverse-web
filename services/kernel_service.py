@@ -95,7 +95,13 @@ class InProcessKernelExecutor:
 
     def sync_adata(self, adata):
         self._ensure_kernel()
-        # Expose as 'odata' only — keeps 'adata' free for user-defined variables
+        if adata is None:
+            self.shell.user_ns.pop('adata', None)
+            self.shell.user_ns.pop('odata', None)
+            return
+        # Keep both aliases in sync so the code editor and channels see the
+        # same live object.
+        self.shell.user_ns['adata'] = adata
         self.shell.user_ns['odata'] = adata
 
     def _ensure_user_ns_runtime(self, namespace):
@@ -214,11 +220,14 @@ class InProcessKernelExecutor:
                     self.shell.user_ns = user_ns
                 if adata is not None:
                     self.shell.user_ns['odata'] = adata
+                    self.shell.user_ns['adata'] = adata
 
                 # Use provided streams or create new buffers
                 stdout_buf = stdout if stdout is not None else io.StringIO()
                 stderr_buf = stderr if stderr is not None else io.StringIO()
 
+                before_adata = self.shell.user_ns.get('adata')
+                before_odata = self.shell.user_ns.get('odata')
                 before_figs = set(plt.get_fignums())
                 try:
                     result = None
@@ -243,6 +252,16 @@ class InProcessKernelExecutor:
 
                     last_result = result.result if result else None
                     adata_value = self.shell.user_ns.get('adata')
+                    odata_value = self.shell.user_ns.get('odata')
+                    if odata_value is not None and odata_value is not before_odata:
+                        adata_value = odata_value
+                        self.shell.user_ns['adata'] = odata_value
+                    elif adata_value is not None and adata_value is not before_adata:
+                        odata_value = adata_value
+                        self.shell.user_ns['odata'] = adata_value
+                    elif adata_value is None and odata_value is not None:
+                        adata_value = odata_value
+                        self.shell.user_ns['adata'] = odata_value
                     return {
                         'output': output,
                         'stderr': stderr_output,
@@ -311,6 +330,7 @@ def build_kernel_namespace(include_adata=False, current_adata=None):
     }
     if include_adata and current_adata is not None:
         namespace['adata'] = current_adata
+        namespace['odata'] = current_adata
     return namespace
 
 

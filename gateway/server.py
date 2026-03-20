@@ -13,7 +13,9 @@ Usage (from a channel bot or CLI):
 
 import os
 import sys
+import atexit
 import socket
+import signal
 import threading
 import webbrowser
 import logging
@@ -21,6 +23,68 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 logger = logging.getLogger("omicverse_web.gateway.server")
+_SHUTDOWN_HOOKS_REGISTERED = False
+
+
+def _register_shutdown_hooks() -> None:
+    """Ensure tracked channel subprocesses are stopped when the gateway exits."""
+    global _SHUTDOWN_HOOKS_REGISTERED
+    if _SHUTDOWN_HOOKS_REGISTERED:
+        return
+    _SHUTDOWN_HOOKS_REGISTERED = True
+
+    def _cleanup() -> None:
+        try:
+            from gateway.channel_config_routes import stop_all_channel_processes
+
+            stop_all_channel_processes()
+        except Exception:
+            logger.exception("GatewayServer: failed to stop channel subprocesses")
+
+    atexit.register(_cleanup)
+
+    if threading.current_thread() is threading.main_thread():
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            prev_handler = signal.getsignal(sig)
+
+            def _handler(signum, frame, *, _prev=prev_handler) -> None:  # type: ignore[override]
+                _cleanup()
+                if callable(_prev) and _prev not in {signal.SIG_DFL, signal.SIG_IGN}:
+                    _prev(signum, frame)
+                raise SystemExit(0)
+
+            try:
+                signal.signal(sig, _handler)
+            except Exception:
+                logger.debug("GatewayServer: could not install %s handler", sig, exc_info=True)
+
+
+def _attach_shared_adata_sync(session_manager, web_state) -> None:
+    """Wire shared AnnData updates between the web state and the session manager.
+
+    The reverse sync hook is optional because some callers may pass a session
+    manager implementation that only supports ``set_shared_adata``.
+    """
+    try:
+        web_attach = getattr(web_state, "attach_session_manager", None)
+        if callable(web_attach):
+            web_attach(session_manager)
+    except Exception:
+        logger.exception("GatewayServer: failed to attach web session manager")
+        return
+
+    sync_handler = getattr(session_manager, "set_adata_sync_handler", None)
+    if not callable(sync_handler):
+        logger.debug(
+            "GatewayServer: session manager does not expose set_adata_sync_handler; "
+            "skipping reverse AnnData sync",
+        )
+        return
+
+    try:
+        sync_handler(lambda _session_id, adata: setattr(web_state, "current_adata", adata))
+    except Exception:
+        logger.exception("GatewayServer: failed to attach shared AnnData handler")
 
 
 def get_available_port(start_port: int = 5050) -> Optional[int]:
@@ -89,6 +153,8 @@ class GatewayServer:
             logger.warning("GatewayServer.start() called while already running")
             return self._thread, self._url  # type: ignore[return-value]
 
+        _register_shutdown_hooks()
+
         bind_port = port if port > 0 else get_available_port()
         if bind_port is None:
             raise RuntimeError("GatewayServer: no available port found in range 5050-5150")
@@ -104,10 +170,14 @@ class GatewayServer:
 
             os.environ.setdefault("PORT", str(bind_port))
 
-            from app import app as flask_app  # type: ignore[import]
+            from app import app as flask_app, state as web_state  # type: ignore[import]
 
             if session_manager is not None:
                 flask_app.config["GATEWAY_SESSION_MANAGER"] = session_manager
+                try:
+                    _attach_shared_adata_sync(session_manager, web_state)
+                except Exception:
+                    logger.exception("GatewayServer: failed to attach shared AnnData handler")
             if channel_registry is not None:
                 flask_app.config["GATEWAY_CHANNEL_REGISTRY"] = channel_registry
             if memory_db_path is not None:

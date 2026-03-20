@@ -44,6 +44,36 @@ _LOG_BUFFERS: dict[str, collections.deque] = {}
 _LOG_BUF_SIZE = 200  # max lines kept per channel
 
 
+def _terminate_process(proc: subprocess.Popen, timeout: float = 5.0) -> None:
+    """Terminate *proc* and fall back to kill if it does not exit quickly."""
+    if proc.poll() is not None:
+        return
+    proc.terminate()
+    try:
+        proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        try:
+            proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def _register_exit_state(channel: str, proc: subprocess.Popen, *, intentional: bool) -> None:
+    """Store the final lifecycle state for a channel process."""
+    with _PROCESS_LOCK:
+        prev = dict(_CHANNEL_STATES.get(channel, {}))
+        _CHANNEL_STATES[channel] = {
+            **prev,
+            "channel": channel,
+            "status": "stopped" if intentional else "failed",
+            "running": False,
+            "pid": proc.pid,
+            "exit_code": proc.poll(),
+        }
+        _PROCESSES.pop(channel, None)
+
+
 def _log_reader(channel: str, proc: subprocess.Popen) -> None:
     """Background thread: drain proc.stdout into _LOG_BUFFERS[channel]."""
     buf = _LOG_BUFFERS.setdefault(channel, collections.deque(maxlen=_LOG_BUF_SIZE))
@@ -58,15 +88,7 @@ def _log_reader(channel: str, proc: subprocess.Popen) -> None:
     with _PROCESS_LOCK:
         prev = dict(_CHANNEL_STATES.get(channel, {}))
         intentional = prev.get("desired_state") == "stopped"
-        _CHANNEL_STATES[channel] = {
-            **prev,
-            "channel": channel,
-            "status": "stopped" if intentional else "failed",
-            "running": False,
-            "pid": proc.pid,
-            "exit_code": rc,
-        }
-        _PROCESSES.pop(channel, None)
+    _register_exit_state(channel, proc, intentional=intentional)
 
 
 def _start_log_reader(channel: str, proc: subprocess.Popen) -> None:
@@ -407,6 +429,14 @@ def _start_channel_process(
         return {"ok": False, "error": str(exc)}
 
 
+def _stop_channel_process(channel: str, proc: subprocess.Popen, *, timeout: float = 5.0) -> dict:
+    """Stop a tracked channel process and update its state."""
+    _set_channel_state(channel, status="stopped", running=False, desired_state="stopped")
+    _terminate_process(proc, timeout=timeout)
+    _register_exit_state(channel, proc, intentional=True)
+    return {"channel": channel, "ok": True, "pid": proc.pid}
+
+
 def list_channel_states() -> list[dict]:
     """Return a snapshot of all supported channel states."""
     cfg = _read_config()
@@ -441,6 +471,27 @@ def auto_start_configured_channels() -> list[dict]:
             _set_channel_state(channel, status="not_configured", running=False, configured=False)
             continue
         results.append(_start_channel_process(channel, cfg=cfg, api_key=api_key, source="gateway-startup"))
+    return results
+
+
+def stop_all_channel_processes(timeout: float = 5.0) -> list[dict]:
+    """Stop every tracked channel process.
+
+    This is used when the gateway process exits so child bot subprocesses do
+    not survive as orphaned processes.
+    """
+    with _PROCESS_LOCK:
+        _refresh_channel_states_locked()
+        snapshot = list(_PROCESSES.items())
+    results: list[dict] = []
+    for channel, proc in snapshot:
+        try:
+            results.append(_stop_channel_process(channel, proc, timeout=timeout))
+        except Exception as exc:
+            _set_channel_state(channel, status="failed", running=False, error=str(exc))
+            results.append({"channel": channel, "ok": False, "error": str(exc)})
+    with _PROCESS_LOCK:
+        _PROCESSES.clear()
     return results
 
 
@@ -623,14 +674,10 @@ def stop_channel(channel: str):
         _set_channel_state(channel, status="stopped", running=False, desired_state="stopped")
         return jsonify({"ok": False, "error": f"{channel} is not running"})
     try:
-        _set_channel_state(channel, status="stopped", running=False, desired_state="stopped")
-        proc.terminate()
-        proc.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-    with _PROCESS_LOCK:
-        _PROCESSES.pop(channel, None)
-    return jsonify({"ok": True, "message": f"{channel} stopped"})
+        result = _stop_channel_process(channel, proc)
+        return jsonify({"ok": True, "message": f"{channel} stopped", **result})
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @channel_config_bp.route("/<channel>/logs", methods=["GET"])

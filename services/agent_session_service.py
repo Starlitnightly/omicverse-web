@@ -16,7 +16,7 @@ import time
 import threading
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 logger = logging.getLogger("omicverse_web.agent_session")
 
@@ -553,8 +553,40 @@ class SessionManager:
                  ttl_seconds: int = SESSION_TTL_SECONDS):
         self._sessions: dict[str, AgentSession] = {}
         self._lock = threading.Lock()
+        self._shared_adata: Any = None
+        self._adata_sync_handler: Optional[Callable[[str, Any], None]] = None
         self.max_sessions = max_sessions
         self.ttl_seconds = ttl_seconds
+
+    def set_adata_sync_handler(self, handler: Optional[Callable[[str, Any], None]]) -> None:
+        """Register a callback that mirrors shared AnnData changes into another owner."""
+        with self._lock:
+            self._adata_sync_handler = handler
+
+    def _emit_adata_sync(self, session_id: str, adata: Any) -> None:
+        handler = self._adata_sync_handler
+        if handler is None:
+            return
+        try:
+            handler(session_id, adata)
+        except Exception:
+            logger.exception("session_adata_sync_handler_failed", extra={"session_id": session_id})
+
+    def set_shared_adata(self, new_adata: Any, *, source_session_id: str = "") -> None:
+        """Replace the shared AnnData reference used by every session."""
+        with self._lock:
+            self._shared_adata = new_adata
+            sessions = list(self._sessions.values())
+            for session in sessions:
+                session.adata = new_adata
+                session.adata_is_owned = new_adata is not None
+                session.touch()
+        self._emit_adata_sync(source_session_id, new_adata)
+
+    def get_shared_adata(self) -> Any:
+        """Return the current shared AnnData reference, if any."""
+        with self._lock:
+            return self._shared_adata
 
     # --- CRUD ---------------------------------------------------------------
 
@@ -573,6 +605,11 @@ class SessionManager:
             # If session already exists, return it
             if session_id in self._sessions:
                 session = self._sessions[session_id]
+                if self._shared_adata is None and base_adata is not None:
+                    self._shared_adata = base_adata
+                if session.adata is None:
+                    session.adata = self._shared_adata if self._shared_adata is not None else base_adata
+                    session.adata_is_owned = session.adata is not None
                 session.touch()
                 return session
 
@@ -583,15 +620,13 @@ class SessionManager:
             while len(self._sessions) >= self.max_sessions:
                 self._evict_oldest_locked()
 
-            # Copy base adata so sessions cannot mutate each other's data
-            # via in-place operations (copy-on-create isolation).
-            session_adata = base_adata.copy() if (
-                base_adata is not None and hasattr(base_adata, 'copy')
-            ) else base_adata
+            if self._shared_adata is None and base_adata is not None:
+                self._shared_adata = base_adata
+            session_adata = self._shared_adata if self._shared_adata is not None else base_adata
             session = AgentSession(
                 session_id=session_id,
                 adata=session_adata,
-                adata_is_owned=True,  # owned from the start (copied)
+                adata_is_owned=session_adata is not None,
             )
             self._sessions[session_id] = session
             logger.info("session_created", extra={
@@ -642,20 +677,26 @@ class SessionManager:
         call ``commit_session_adata`` which stores the result.
         """
         session = self.get_session(session_id)
-        if session is not None and session.adata is not None:
-            return session.adata
-        return fallback_adata
+        if session is not None:
+            if session.adata is not None:
+                return session.adata
+            shared = self._shared_adata if self._shared_adata is not None else fallback_adata
+            if shared is not None:
+                session.set_adata(shared)
+            return shared
+        return self._shared_adata if self._shared_adata is not None else fallback_adata
 
     def commit_session_adata(self, session_id: str, new_adata: Any) -> None:
         """Store mutated adata back into the session (copy-on-write commit)."""
         session = self.get_session(session_id)
-        if session is not None:
-            session.set_adata(new_adata)
-            logger.info("session_adata_committed", extra={
-                "session_id": session_id,
-                "n_obs": getattr(new_adata, 'n_obs', None),
-                "n_vars": getattr(new_adata, 'n_vars', None),
-            })
+        if session is None:
+            return
+        self.set_shared_adata(new_adata, source_session_id=session_id)
+        logger.info("session_adata_committed", extra={
+            "session_id": session_id,
+            "n_obs": getattr(new_adata, 'n_obs', None),
+            "n_vars": getattr(new_adata, 'n_vars', None),
+        })
 
     def register_approval(self, session_id: str, approval: ApprovalRequest) -> None:
         session = self.get_session(session_id)
