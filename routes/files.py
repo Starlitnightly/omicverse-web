@@ -50,7 +50,13 @@ def list_files():
     rel = '' if target == bp.file_root else str(target.relative_to(bp.file_root))
     parent = '' if target == bp.file_root else str(target.parent.relative_to(bp.file_root))
 
-    return jsonify({'path': rel, 'parent': parent, 'entries': entries})
+    return jsonify({
+        'path': rel,
+        'parent': parent,
+        'entries': entries,
+        'root_abs': str(bp.file_root),          # absolute server root (for display)
+        'current_abs': str(target),              # absolute current dir (for display)
+    })
 
 
 @bp.route('/open', methods=['POST'])

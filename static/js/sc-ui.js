@@ -488,6 +488,15 @@ Object.assign(SingleCellAnalysis.prototype, {
     refreshDataFromKernel(data) {
         if (!data) return;
         this.currentData = data;
+
+        // Show viz panel and hide upload section (mirrors updateUI behaviour)
+        const uploadSection = document.getElementById('upload-section');
+        if (uploadSection) uploadSection.style.display = 'none';
+        const vizPanel = document.getElementById('viz-panel');
+        if (vizPanel) vizPanel.style.display = 'block';
+        const vizControls = document.getElementById('viz-controls');
+        if (vizControls) vizControls.style.display = 'block';
+
         const statusDiv = document.getElementById('data-status');
         if (statusDiv) statusDiv.classList.remove('d-none');
         const filenameDisplay = document.getElementById('filename-display');

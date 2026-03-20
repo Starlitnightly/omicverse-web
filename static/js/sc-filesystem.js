@@ -56,9 +56,9 @@ Object.assign(SingleCellAnalysis.prototype, {
             }
         });
 
-        // Click anywhere in the dropZone to upload
+        // Click: open server file browser instead of local file picker
         dropZone.addEventListener('click', (e) => {
-            fileInput.click();
+            this.openServerFileBrowser('analysis');
         });
 
         // ── Preview Mode drop zone ────────────────────────────────────────────
@@ -83,8 +83,171 @@ Object.assign(SingleCellAnalysis.prototype, {
             fileInputPreview.addEventListener('change', (e) => {
                 if (e.target.files.length > 0) this.handleFileUploadPreview(e.target.files[0]);
             });
-            dropZonePreview.addEventListener('click', () => fileInputPreview.click());
+            dropZonePreview.addEventListener('click', () => this.openServerFileBrowser('preview'));
         }
+    },
+
+    // ── Server file browser modal ─────────────────────────────────────────────
+
+    openServerFileBrowser(mode) {
+        let modal = document.getElementById('server-file-browser-modal');
+        if (!modal) {
+            modal = this._createServerFileBrowserModal();
+            document.body.appendChild(modal);
+        }
+        modal.dataset.mode = mode;
+        const title = modal.querySelector('.modal-title');
+        if (title) {
+            title.textContent = mode === 'preview'
+                ? (this.t('upload.previewMode') || '仅预览模式 — 选择服务器文件')
+                : (this.t('upload.analysisMode') || '分析读取模式 — 选择服务器文件');
+        }
+        this._serverBrowserSelectedPath = null;
+        const loadBtn = document.getElementById('server-browser-load-btn');
+        if (loadBtn) loadBtn.disabled = true;
+        const selectedEl = document.getElementById('server-browser-selected');
+        if (selectedEl) selectedEl.textContent = '';
+        this._loadServerBrowserPath('');
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    },
+
+    _createServerFileBrowserModal() {
+        const div = document.createElement('div');
+        div.id = 'server-file-browser-modal';
+        div.className = 'modal fade';
+        div.tabIndex = -1;
+        div.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header py-2">
+                        <h6 class="modal-title mb-0"></h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div id="server-browser-abs-path"
+                             class="text-muted px-2 py-1"
+                             style="font-size:0.75rem;background:var(--bs-light,#f8f9fa);word-break:break-all;font-family:monospace;border-bottom:1px solid var(--bs-border-color,#dee2e6);"></div>
+                        <div id="server-browser-back-row" style="display:none;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
+                            <div id="server-browser-back-btn"
+                                 class="d-flex align-items-center px-2 py-1 small"
+                                 style="cursor:pointer;user-select:none;">
+                                <i class="feather-arrow-left me-2 text-muted" style="font-size:.85rem;"></i>
+                                <span class="text-muted">返回上层</span>
+                            </div>
+                        </div>
+                        <div style="max-height:52vh;overflow-y:auto;">
+                            <div id="server-browser-list" class="p-2"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <span id="server-browser-selected" class="text-muted small me-auto text-truncate" style="max-width:50%;"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">取消</button>
+                        <button type="button" id="server-browser-load-btn" class="btn btn-sm btn-primary" disabled>加载</button>
+                    </div>
+                </div>
+            </div>`;
+        div.querySelector('#server-browser-load-btn').addEventListener('click', () => {
+            const path = this._serverBrowserSelectedPath;
+            const mode = div.dataset.mode;
+            if (!path) return;
+            bootstrap.Modal.getInstance(div)?.hide();
+            this.loadH5adFromServer(path, mode);
+        });
+        return div;
+    },
+
+    _loadServerBrowserPath(relPath) {
+        const listEl = document.getElementById('server-browser-list');
+        const absPathEl = document.getElementById('server-browser-abs-path');
+        const backRow = document.getElementById('server-browser-back-row');
+        const backBtn = document.getElementById('server-browser-back-btn');
+        if (!listEl) return;
+        listEl.innerHTML = `<div class="text-muted small p-2">${this.t('common.loading') || '加载中…'}</div>`;
+        const url = new URL('/api/files/list', window.location.origin);
+        if (relPath) url.searchParams.set('path', relPath);
+        fetch(url.toString())
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { listEl.textContent = data.error; return; }
+                if (absPathEl) {
+                    const display = data.current_abs || data.root_abs || '';
+                    absPathEl.textContent = display ? `📂 ${display}` : '';
+                }
+                // Show/hide back button and wire it up
+                if (backRow) backRow.style.display = data.path ? '' : 'none';
+                if (backBtn) {
+                    const newBtn = backBtn.cloneNode(true); // remove old listeners
+                    backBtn.parentNode.replaceChild(newBtn, backBtn);
+                    newBtn.addEventListener('click', () => this._loadServerBrowserPath(data.parent || ''));
+                    newBtn.addEventListener('mouseenter', () => newBtn.classList.add('bg-light'));
+                    newBtn.addEventListener('mouseleave', () => newBtn.classList.remove('bg-light'));
+                }
+                this._renderServerBrowserList(listEl, data.entries || [], data.path || '', data.parent || '');
+            })
+            .catch(err => { listEl.textContent = err.message; });
+    },
+
+    _renderServerBrowserList(container, entries, currentPath, parentPath) {
+        container.innerHTML = '';
+
+        if (!entries.length) {
+            const empty = document.createElement('div');
+            empty.className = 'text-muted small text-center py-4';
+            empty.textContent = this.t('file.empty') || '目录为空';
+            container.appendChild(empty);
+            return;
+        }
+
+        entries.forEach(entry => {
+            const isH5ad = entry.type === 'file' && (entry.ext || '').toLowerCase() === '.h5ad';
+            const isDir = entry.type === 'dir';
+            const disabled = !isH5ad && !isDir;
+
+            const item = document.createElement('div');
+            item.className = 'server-browser-item d-flex align-items-center px-2 py-1 rounded mb-1';
+            item.style.cursor = disabled ? 'default' : 'pointer';
+            if (disabled) item.style.opacity = '0.45';
+
+            const iconClass = isDir ? 'feather-folder text-warning' : (isH5ad ? 'feather-database text-primary' : 'feather-file text-muted');
+            const nameClass = isH5ad ? 'fw-semibold text-primary' : '';
+            item.innerHTML = `<i class="${iconClass} me-2" style="font-size:.85rem;"></i><span class="small ${nameClass}">${entry.name}</span>`;
+
+            if (isDir) {
+                item.addEventListener('click', () => {
+                    const next = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                    this._loadServerBrowserPath(next);
+                });
+                item.addEventListener('mouseenter', () => item.classList.add('bg-light'));
+                item.addEventListener('mouseleave', () => item.classList.remove('bg-light'));
+            } else if (isH5ad) {
+                const filePath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+                const select = () => {
+                    container.querySelectorAll('.sb-selected').forEach(el => {
+                        el.classList.remove('sb-selected', 'bg-primary');
+                        el.querySelectorAll('.text-white').forEach(c => c.classList.remove('text-white'));
+                    });
+                    item.classList.add('sb-selected', 'bg-primary');
+                    item.querySelectorAll('i, span').forEach(c => c.classList.add('text-white'));
+                    this._serverBrowserSelectedPath = filePath;
+                    const sel = document.getElementById('server-browser-selected');
+                    if (sel) sel.textContent = filePath;
+                    const btn = document.getElementById('server-browser-load-btn');
+                    if (btn) btn.disabled = false;
+                };
+                item.addEventListener('click', select);
+                item.addEventListener('dblclick', () => {
+                    select();
+                    const modal = document.getElementById('server-file-browser-modal');
+                    bootstrap.Modal.getInstance(modal)?.hide();
+                    this.loadH5adFromServer(filePath, modal?.dataset.mode || 'analysis');
+                });
+                item.addEventListener('mouseenter', () => { if (!item.classList.contains('sb-selected')) item.classList.add('bg-light'); });
+                item.addEventListener('mouseleave', () => { if (!item.classList.contains('sb-selected')) item.classList.remove('bg-light'); });
+            }
+
+            container.appendChild(item);
+        });
     },
 
     handleFileUploadPreview(file) {
@@ -269,7 +432,11 @@ Object.assign(SingleCellAnalysis.prototype, {
                 node.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const filePath = path ? `${path}/${entry.name}` : entry.name;
-                    this.openFileFromServer(filePath);
+                    if ((entry.ext || '').toLowerCase() === '.h5ad') {
+                        this.openH5adFromServer(filePath);
+                    } else {
+                        this.openFileFromServer(filePath);
+                    }
                 });
                 node.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
@@ -336,6 +503,70 @@ Object.assign(SingleCellAnalysis.prototype, {
                 this.updatePreviewModeBanner(false);
                 this.addToLog(this.t('upload.successDetail') + ': ' + data.n_cells + ' ' + this.t('status.cells') + ', ' + data.n_genes + ' ' + this.t('status.genes'));
                 this.showStatus(this.t('upload.success'), false);
+            }
+        })
+        .catch(error => {
+            this.hideStatus();
+            this.addToLog(this.t('upload.failed') + ': ' + error.message, 'error');
+            this.showStatus(this.t('upload.failed') + ': ' + error.message, false);
+            alert(this.t('upload.failed') + ': ' + error.message);
+        });
+    },
+
+    openH5adFromServer(path) {
+        const msg = (this.t('upload.serverModePrompt') ||
+            '选择加载模式\n\n点击「确定」→ 分析读取模式（完整加载到内存，支持所有分析）\n点击「取消」→ 仅预览模式（低内存读取）');
+        const fullMode = confirm(msg);
+        this.loadH5adFromServer(path, fullMode ? 'analysis' : 'preview');
+    },
+
+    loadH5adFromServer(path, mode) {
+        const isPreview = mode === 'preview';
+        const endpoint = isPreview ? '/api/load_preview_from_server' : '/api/load_from_server';
+        const statusMsg = isPreview
+            ? (this.t('upload.previewUploading') || '正在以预览模式读取…')
+            : (this.t('upload.uploading') || '正在读取数据…');
+
+        this.showStatus(statusMsg, true);
+        this.addToLog((isPreview ? (this.t('upload.previewStart') || '预览读取') : (this.t('upload.start') || '读取')) + ': ' + path);
+
+        fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        })
+        .then(async response => {
+            if (!response.ok) {
+                const text = await response.text().catch(() => '');
+                try { const js = JSON.parse(text); throw new Error(js.error || `HTTP ${response.status}`); }
+                catch (e) { throw new Error(text || `HTTP ${response.status}`); }
+            }
+            return response.json();
+        })
+        .then(data => {
+            this.hideStatus();
+            if (data.error) {
+                this.addToLog(this.t('common.error') + ': ' + data.error, 'error');
+                this.showStatus(this.t('upload.failed') + ': ' + data.error, false);
+                alert(this.t('upload.failed') + ': ' + data.error);
+                return;
+            }
+            if (isPreview) {
+                data.preview_mode = true;
+                this.isPreviewMode = true;
+                this.currentData = data;
+                this.updateUI(data);
+                this.updateAdataStatus(data);
+                this.updatePreviewModeBanner(true);
+                this.addToLog((this.t('upload.previewSuccess') || '预览读取成功') + ': ' + data.n_cells + ' ' + this.t('status.cells') + ', ' + data.n_genes + ' ' + this.t('status.genes'));
+            } else {
+                this.isPreviewMode = false;
+                data.preview_mode = false;
+                this.currentData = data;
+                this.updateUI(data);
+                this.updateAdataStatus(data);
+                this.updatePreviewModeBanner(false);
+                this.addToLog(this.t('upload.successDetail') + ': ' + data.n_cells + ' ' + this.t('status.cells') + ', ' + data.n_genes + ' ' + this.t('status.genes'));
             }
         })
         .catch(error => {

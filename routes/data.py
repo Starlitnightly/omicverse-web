@@ -15,6 +15,7 @@ from utils.adata_helpers import (
     canonical_embedding_keys as _canonical_embedding_keys,
     resolve_embedding_key as _resolve_embedding_key,
 )
+from utils.file_helpers import resolve_browse_path, is_h5ad_file
 
 
 # Create blueprint
@@ -176,6 +177,117 @@ def upload_file_preview():
 
     except Exception as e:
         logging.error(f"Preview upload failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/load_from_server', methods=['POST'])
+def load_from_server():
+    """Load h5ad file from a server-side path (analysis/full mode)."""
+    data = request.json if request.json else {}
+    rel_path = data.get('path', '')
+    if not rel_path:
+        return jsonify({'error': 'No path provided'}), 400
+
+    try:
+        target = resolve_browse_path(bp.state.file_root, rel_path)
+    except ValueError:
+        return jsonify({'error': 'Invalid path'}), 400
+
+    if not target.exists() or not target.is_file():
+        return jsonify({'error': 'File not found'}), 404
+
+    if not is_h5ad_file(target):
+        return jsonify({'error': 'File must be .h5ad format'}), 400
+
+    try:
+        filepath = str(target)
+        filename = target.name
+
+        bp.state.current_adaptor = HighPerformanceAnndataAdaptor(filepath)
+        bp.state.current_adata = bp.state.current_adaptor.adata
+        bp.state.current_filename = filename
+        bp.state.is_preview_mode = False
+
+        if 'X_random' not in bp.state.current_adata.obsm:
+            seed = abs(hash(filepath)) % (2**32 - 1)
+            rng = np.random.RandomState(seed)
+            bp.state.current_adata.obsm['X_random'] = rng.rand(
+                bp.state.current_adata.n_obs, 2).astype(np.float32)
+
+        try:
+            bp.state.kernel_executor.sync_adata(bp.state.current_adata)
+        except Exception:
+            pass
+
+        from utils.adata_helpers import analyze_data_state as _analyze_data_state
+        adata = bp.state.current_adata
+        embeddings = _canonical_embedding_keys(adata)
+        response_data = {
+            'filename': filename,
+            'n_cells': adata.n_obs,
+            'n_genes': adata.n_vars,
+            'embeddings': embeddings,
+            'obs_columns': list(adata.obs.columns),
+            'var_columns': list(adata.var.columns),
+            'uns_keys': list(adata.uns.keys()),
+            'layers': list(adata.layers.keys()),
+            'data_state': _analyze_data_state(adata),
+            'success': True
+        }
+        return jsonify(response_data)
+
+    except Exception as e:
+        logging.error(f"Load from server failed: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/load_preview_from_server', methods=['POST'])
+def load_preview_from_server():
+    """Load h5ad file from a server-side path (preview/backed mode)."""
+    data = request.json if request.json else {}
+    rel_path = data.get('path', '')
+    if not rel_path:
+        return jsonify({'error': 'No path provided'}), 400
+
+    try:
+        target = resolve_browse_path(bp.state.file_root, rel_path)
+    except ValueError:
+        return jsonify({'error': 'Invalid path'}), 400
+
+    if not target.exists() or not target.is_file():
+        return jsonify({'error': 'File not found'}), 404
+
+    if not is_h5ad_file(target):
+        return jsonify({'error': 'File must be .h5ad format'}), 400
+
+    try:
+        import scanpy as sc
+        filepath = str(target)
+        filename = target.name
+
+        adata_backed = sc.read_h5ad(filepath, backed='r')
+        bp.state.current_adata = adata_backed
+        bp.state.current_filename = filename
+        bp.state.is_preview_mode = True
+        bp.state.current_adaptor = HighPerformanceAnndataAdaptor(adata_backed)
+
+        embeddings = _canonical_embedding_keys(adata_backed)
+        response_data = {
+            'filename': filename,
+            'n_cells': adata_backed.n_obs,
+            'n_genes': adata_backed.n_vars,
+            'embeddings': embeddings,
+            'obs_columns': list(adata_backed.obs.columns),
+            'var_columns': list(adata_backed.var.columns),
+            'uns_keys': list(adata_backed.uns.keys()),
+            'layers': list(adata_backed.layers.keys()) if adata_backed.layers else [],
+            'preview_mode': True,
+            'success': True,
+        }
+        return jsonify(response_data)
+
+    except Exception as e:
+        logging.error(f"Load preview from server failed: {e}")
         return jsonify({'error': str(e)}), 500
 
 
