@@ -159,6 +159,45 @@
                         </a>
                     </li>
                 </ul>
+                <!-- Gateway Nav -->
+                <ul class="nxl-navbar" id="gateway-nav" style="display: none;">
+                    <li class="nxl-item nxl-caption">
+                        <label>Gateway</label>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link active" id="gw-nav-overview" onclick="singleCellApp.showGatewayTab('overview')">
+                            <span class="nxl-micon"><i class="feather-activity"></i></span>
+                            <span class="nxl-mtext">Overview</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-channels" onclick="singleCellApp.showGatewayTab('channels')">
+                            <span class="nxl-micon"><i class="feather-radio"></i></span>
+                            <span class="nxl-mtext">Channels</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-sessions" onclick="singleCellApp.showGatewayTab('sessions')">
+                            <span class="nxl-micon"><i class="feather-users"></i></span>
+                            <span class="nxl-mtext">Sessions</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-memory" onclick="singleCellApp.showGatewayTab('memory')">
+                            <span class="nxl-micon"><i class="feather-database"></i></span>
+                            <span class="nxl-mtext">Memory</span>
+                        </a>
+                    </li>
+                    <li class="nxl-item nxl-caption">
+                        <label>Actions</label>
+                    </li>
+                    <li class="nxl-item">
+                        <a href="javascript:void(0);" class="nxl-link" onclick="singleCellApp.refreshGateway()">
+                            <span class="nxl-micon"><i class="feather-refresh-cw"></i></span>
+                            <span class="nxl-mtext">Refresh</span>
+                        </a>
+                    </li>
+                </ul>
                 <ul class="nxl-navbar" id="agent-config-nav" style="display: none;">
                     <li class="nxl-item nxl-caption">
                         <label data-i18n="agent.configTitle">Agent Configuration</label>
@@ -427,6 +466,9 @@
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-primary" id="view-skills-btn" onclick="singleCellApp.switchView('skills')">
                                 <i class="feather-grid me-1"></i><span data-i18n="view.skills">Skills</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="view-gateway-btn" onclick="singleCellApp.switchView('gateway')">
+                                <i class="feather-share-2 me-1"></i>Gateway
                             </button>
                         </div>
                     </div>
@@ -1662,6 +1704,191 @@
                     </div>
                 </div>
                 <!-- End Account View -->
+
+                <!-- Gateway View -->
+                <div id="gateway-view" class="content-view" style="display:none;">
+                    <!-- Tab panes -->
+                    <div id="gw-tab-overview" class="gw-tab-pane">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body py-3">
+                                        <div class="fs-2 fw-bold text-primary" id="gw-stat-channels">—</div>
+                                        <div class="text-muted small">Active Channels</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body py-3">
+                                        <div class="fs-2 fw-bold text-success" id="gw-stat-sessions">—</div>
+                                        <div class="text-muted small">Sessions</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body py-3">
+                                        <div class="fs-2 fw-bold text-info" id="gw-stat-messages">—</div>
+                                        <div class="text-muted small">Messages (24 h)</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body py-3">
+                                        <div class="fs-2 fw-bold text-warning" id="gw-stat-memories">—</div>
+                                        <div class="text-muted small">Memory Docs</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header py-2 small fw-semibold">
+                                <i class="feather-activity me-1"></i>Gateway Status
+                            </div>
+                            <div class="card-body">
+                                <div id="gw-status-detail" class="text-muted small">Loading…</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="gw-tab-channels" class="gw-tab-pane" style="display:none;">
+                        <!-- LLM Model Config -->
+                        <div class="card mb-3">
+                            <div class="card-header py-2 small fw-semibold d-flex align-items-center justify-content-between">
+                                <span><i class="feather-cpu me-1"></i>LLM Model</span>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span id="gw-config-path" class="text-muted" style="font-size:0.72rem;"></span>
+                                    <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveLLMConfig()">
+                                        <i class="feather-save me-1"></i>Save
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-2">
+                                    <div class="col-md-3">
+                                        <label class="form-label small fw-semibold mb-1">Model</label>
+                                        <input type="text" id="gw-llm-model" class="form-control form-control-sm" placeholder="gpt-4o, claude-sonnet-4-6…">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label small fw-semibold mb-1">API Key
+                                            <span id="gw-llm-key-badge" class="badge bg-secondary ms-1" style="font-size:0.68rem;">not set</span>
+                                        </label>
+                                        <input type="password" id="gw-llm-api-key" class="form-control form-control-sm" placeholder="sk-… (leave empty to keep existing)">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-semibold mb-1">API Endpoint <span class="text-muted fw-normal">(optional)</span></label>
+                                        <input type="text" id="gw-llm-endpoint" class="form-control form-control-sm" placeholder="https://api.openai.com/v1">
+                                    </div>
+                                </div>
+                                <div id="gw-llm-save-result" class="mt-2" style="font-size:0.82rem;display:none;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Channel Cards (rendered by JS) -->
+                        <div id="gw-channel-cards"></div>
+                    </div>
+
+                    <div id="gw-tab-sessions" class="gw-tab-pane" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-semibold mb-0"><i class="feather-users me-2"></i>Active Sessions</h6>
+                            <button class="btn btn-sm btn-outline-primary" onclick="singleCellApp.refreshGateway()">
+                                <i class="feather-refresh-cw me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div id="gw-sessions-list">
+                            <div class="text-muted text-center py-4">Loading sessions…</div>
+                        </div>
+                    </div>
+
+                    <div id="gw-tab-memory" class="gw-tab-pane" style="display:none;">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h6 class="fw-semibold mb-0"><i class="feather-database me-2"></i>Memory Store</h6>
+                            <div class="d-flex gap-2">
+                                <input type="text" id="gw-memory-search" class="form-control form-control-sm" style="width:220px;" placeholder="Search memory…" oninput="singleCellApp.searchMemory(this.value)">
+                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.showMemoryDocModal()">
+                                    <i class="feather-plus me-1"></i>New Doc
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Folder tree + documents -->
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="card h-100">
+                                    <div class="card-header py-2 small fw-semibold">
+                                        <i class="feather-folder me-1"></i>Folders
+                                        <button class="btn btn-xs btn-outline-secondary float-end" style="font-size:0.7rem;padding:1px 6px;" onclick="singleCellApp.showFolderModal()">+</button>
+                                    </div>
+                                    <div class="card-body p-2" id="gw-folder-tree">
+                                        <div class="text-muted small">Loading…</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <div id="gw-memory-docs">
+                                    <div class="text-muted text-center py-4">Loading documents…</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- End Gateway View -->
+
+                <!-- Memory Doc Modal -->
+                <div id="gw-doc-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);overflow-y:auto;">
+                    <div style="background:var(--bs-body-bg,#fff);border-radius:12px;margin:32px auto;max-width:640px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.3);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
+                            <span class="fw-semibold" id="gw-doc-modal-title">New Memory Document</span>
+                            <button class="btn btn-sm btn-light" onclick="singleCellApp.hideMemoryDocModal()"><i class="feather-x"></i></button>
+                        </div>
+                        <div style="padding:20px;">
+                            <input type="hidden" id="gw-doc-edit-id" value="">
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Title</label>
+                                <input type="text" id="gw-doc-title" class="form-control form-control-sm" placeholder="Document title">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Folder</label>
+                                <select id="gw-doc-folder" class="form-select form-select-sm">
+                                    <option value="">— root —</option>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Tags (comma-separated)</label>
+                                <input type="text" id="gw-doc-tags" class="form-control form-control-sm" placeholder="tag1, tag2">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Content</label>
+                                <textarea id="gw-doc-content" class="form-control form-control-sm" rows="7" placeholder="Markdown content…"></textarea>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-secondary" onclick="singleCellApp.hideMemoryDocModal()">Cancel</button>
+                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveMemoryDoc()">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Folder Modal -->
+                <div id="gw-folder-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);">
+                    <div style="background:var(--bs-body-bg,#fff);border-radius:12px;margin:80px auto;max-width:400px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.3);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
+                            <span class="fw-semibold">New Folder</span>
+                            <button class="btn btn-sm btn-light" onclick="document.getElementById('gw-folder-modal').style.display='none'"><i class="feather-x"></i></button>
+                        </div>
+                        <div style="padding:18px;">
+                            <div class="mb-2">
+                                <label class="form-label small">Folder Name</label>
+                                <input type="text" id="gw-folder-name" class="form-control form-control-sm" placeholder="My folder">
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <button class="btn btn-sm btn-secondary" onclick="document.getElementById('gw-folder-modal').style.display='none'">Cancel</button>
+                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveFolder()">Create</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Terminal View — fills nxl-container; session list is in nxl-navigation -->
                 <div id="terminal-view" class="content-view term-full-view" style="display:none;">

@@ -774,11 +774,13 @@ Object.assign(SingleCellAnalysis.prototype, {
         const skillsView   = document.getElementById('skills-view');
         const accountView  = document.getElementById('account-view');
         const termView     = document.getElementById('terminal-view');
+        const gatewayView  = document.getElementById('gateway-view');
         const vizBtn       = document.getElementById('view-viz-btn');
         const codeBtn      = document.getElementById('view-code-btn');
         const agentBtn     = document.getElementById('view-agent-btn');
         const skillsBtn    = document.getElementById('view-skills-btn');
         const termBtn      = document.getElementById('view-terminal-btn');
+        const gatewayBtn   = document.getElementById('view-gateway-btn');
         const vizToolbar   = document.getElementById('viz-toolbar');
         const codeToolbarRow = document.getElementById('code-editor-toolbar-row');
         const pageTitle    = document.getElementById('page-title');
@@ -786,13 +788,14 @@ Object.assign(SingleCellAnalysis.prototype, {
         const analysisNav  = document.getElementById('analysis-nav');
         const agentConfigNav = document.getElementById('agent-config-nav');
         const skillsStoreNav = document.getElementById('skills-store-nav');
+        const gatewayNav   = document.getElementById('gateway-nav');
         const fileManager  = document.getElementById('file-manager');
         const termNavPanel = document.getElementById('term-nav-panel');
         const navbarContent = document.querySelector('.navbar-content');
 
         // ── helper: reset all tab buttons to outline ──────────────────────
         const _deactivateAll = () => {
-            [vizBtn, codeBtn, agentBtn, skillsBtn, termBtn].forEach(b => {
+            [vizBtn, codeBtn, agentBtn, skillsBtn, termBtn, gatewayBtn].forEach(b => {
                 if (!b) return;
                 b.classList.remove('btn-primary');
                 b.classList.add('btn-outline-primary');
@@ -800,13 +803,14 @@ Object.assign(SingleCellAnalysis.prototype, {
         };
 
         // Hide all views first
-        [vizView, codeView, agentView, skillsView, accountView, termView].forEach(v => { if (v) v.style.display = 'none'; });
+        [vizView, codeView, agentView, skillsView, accountView, termView, gatewayView].forEach(v => { if (v) v.style.display = 'none'; });
         _deactivateAll();
         if (vizToolbar)    vizToolbar.style.display    = 'none';
         if (codeToolbarRow) codeToolbarRow.style.display = 'none';
         if (analysisNav)   analysisNav.style.display   = 'none';
         if (agentConfigNav) agentConfigNav.style.display = 'none';
         if (skillsStoreNav) skillsStoreNav.style.display = 'none';
+        if (gatewayNav)    gatewayNav.style.display    = 'none';
         if (fileManager)   fileManager.style.display   = 'none';
         // Hide terminal nav panel and restore navbar-content for non-terminal views
         if (termNavPanel)  termNavPanel.style.display  = 'none';
@@ -886,7 +890,762 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (pageTitle) pageTitle.innerHTML = `<i class="feather-user me-2"></i>${this.t('view.accountTitle')}`;
             if (breadcrumbTitle) breadcrumbTitle.textContent = this.t('breadcrumb.account');
             if (this.renderAccountCenter) this.renderAccountCenter();
+        } else if (view === 'gateway') {
+            if (gatewayView) gatewayView.style.display = 'block';
+            if (gatewayBtn)  { gatewayBtn.classList.remove('btn-outline-primary'); gatewayBtn.classList.add('btn-primary'); }
+            if (gatewayNav)  gatewayNav.style.display = 'block';
+            if (pageTitle) pageTitle.innerHTML = `<i class="feather-share-2 me-2"></i>Gateway`;
+            if (breadcrumbTitle) breadcrumbTitle.textContent = 'Gateway';
+            // Load data if first visit or if refresh requested
+            if (!this._gatewayLoaded) {
+                this._gatewayActiveTab = 'overview';
+                this.refreshGateway();
+            }
         }
+    },
+
+    // ── Gateway Panel ──────────────────────────────────────────────────────
+
+    _gatewayLoaded: false,
+    _gatewayActiveTab: 'overview',
+    _gatewayAutoRefreshTimer: null,
+    _gatewayFolders: [],
+
+    showGatewayTab(tab) {
+        this._gatewayActiveTab = tab;
+        ['overview', 'channels', 'sessions', 'memory'].forEach(t => {
+            const pane = document.getElementById(`gw-tab-${t}`);
+            const link = document.getElementById(`gw-nav-${t}`);
+            if (pane) pane.style.display = t === tab ? '' : 'none';
+            if (link) {
+                link.classList.toggle('active', t === tab);
+                // highlight active item
+                link.style.fontWeight = t === tab ? '600' : '';
+                link.style.color = t === tab ? 'var(--bs-primary)' : '';
+            }
+        });
+        if (tab === 'memory' && !this._gatewayMemoryLoaded) {
+            this._loadMemoryData();
+        }
+        if (tab === 'channels') {
+            this.loadChannelConfig();
+        }
+    },
+
+    refreshGateway() {
+        this._gatewayLoaded = true;
+        this._loadGatewayStatus();
+        if (this._gatewayActiveTab === 'memory') {
+            this._loadMemoryData();
+        }
+        if (this._gatewayActiveTab === 'channels') {
+            this.loadChannelConfig();
+        }
+    },
+
+    _loadGatewayStatus() {
+        // Load overview stats + channel/session lists in parallel
+        Promise.all([
+            fetch('/api/gateway/status').then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch('/api/gateway/sessions').then(r => r.ok ? r.json() : null).catch(() => null),
+            fetch('/api/gateway/memory/stats').then(r => r.ok ? r.json() : null).catch(() => null),
+        ]).then(([status, sessions, memStats]) => {
+            this._renderGatewayOverview(status, sessions, memStats);
+            this._renderGatewayChannels(status);
+            this._renderGatewaySessions(sessions);
+        });
+    },
+
+    _renderGatewayOverview(status, sessions, memStats) {
+        const channels = (status && status.channels) ? status.channels : [];
+        const sessionList = (sessions && sessions.sessions) ? sessions.sessions : [];
+        const memDocs = (memStats && memStats.total_documents != null) ? memStats.total_documents : '—';
+
+        const el = id => document.getElementById(id);
+        if (el('gw-stat-channels')) el('gw-stat-channels').textContent = channels.length;
+        if (el('gw-stat-sessions')) el('gw-stat-sessions').textContent = sessionList.length;
+        if (el('gw-stat-memories')) el('gw-stat-memories').textContent = memDocs;
+
+        // message count
+        let msgCount = 0;
+        sessionList.forEach(s => { msgCount += (s.message_count || 0); });
+        if (el('gw-stat-messages')) el('gw-stat-messages').textContent = msgCount;
+
+        // Status detail
+        const detail = el('gw-status-detail');
+        if (detail) {
+            if (!status) {
+                detail.innerHTML = `<span class="text-warning"><i class="feather-alert-circle me-1"></i>Gateway API not available — running in web-only mode.</span>`;
+            } else {
+                detail.innerHTML = `
+                    <div class="row g-2">
+                        ${channels.map(ch => {
+                            const chName = (typeof ch === 'string') ? ch : (ch.name || ch.channel || '?');
+                            const chStatus = (typeof ch === 'object') ? (ch.status || 'connected') : 'connected';
+                            const isStarting = chStatus === 'starting';
+                            const bg = isStarting ? 'var(--bs-warning-bg-subtle,#fff3cd)' : 'var(--bs-success-bg-subtle,#d1e7dd)';
+                            const color = isStarting ? 'var(--bs-warning-text,#664d03)' : 'var(--bs-success-text,#0a3622)';
+                            const sesCount = (typeof ch === 'object') ? (ch.session_count || 0) : 0;
+                            return `
+                        <div class="col-auto">
+                            <span class="badge" style="background:${bg};color:${color};font-size:0.82rem;padding:5px 10px;">
+                                <i class="feather-radio me-1"></i>${chName}
+                                <span class="ms-1 opacity-75">${isStarting ? '(starting)' : sesCount + ' sess.'}</span>
+                            </span>
+                        </div>`;}).join('') || '<div class="text-muted small">No channels connected.</div>'}
+                    </div>
+                    ${status.version ? `<div class="mt-2 text-muted small">Gateway v${status.version}</div>` : ''}
+                `;
+            }
+        }
+    },
+
+    _renderGatewayChannels(status) {
+        const el = document.getElementById('gw-channels-list');
+        if (!el) return;
+        const channels = (status && status.channels) ? status.channels : [];
+        if (!channels.length) {
+            el.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="feather-radio" style="font-size:2.5rem;opacity:.35;display:block;margin-bottom:12px;"></i>
+                    <p>No channels connected.<br><small>Start <code>omicverse claw --channel telegram --with-web</code> to connect a channel.</small></p>
+                </div>`;
+            return;
+        }
+        el.innerHTML = `<div class="row g-3">${channels.map(ch => {
+            const name = typeof ch === 'string' ? ch : (ch.name || ch.channel || JSON.stringify(ch));
+            const status = typeof ch === 'object' ? (ch.status || 'connected') : 'connected';
+            const sessions = typeof ch === 'object' ? (ch.session_count || 0) : 0;
+            const color = status === 'connected' ? 'success' : 'secondary';
+            return `
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-${color} me-2">${status}</span>
+                            <span class="fw-semibold text-capitalize">${name}</span>
+                        </div>
+                        <div class="text-muted small"><i class="feather-users me-1"></i>${sessions} sessions</div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('')}</div>`;
+    },
+
+    _renderGatewaySessions(sessionsData) {
+        const el = document.getElementById('gw-sessions-list');
+        if (!el) return;
+        const sessions = (sessionsData && sessionsData.sessions) ? sessionsData.sessions : [];
+        if (!sessions.length) {
+            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-users" style="font-size:2.5rem;opacity:.35;display:block;margin-bottom:12px;"></i><p>No active sessions.</p></div>`;
+            return;
+        }
+        el.innerHTML = `
+        <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-light"><tr>
+                <th>Session ID</th><th>Channel</th><th>Messages</th><th>Last Active</th><th></th>
+            </tr></thead>
+            <tbody>
+            ${sessions.map(s => `
+            <tr>
+                <td><code style="font-size:0.78rem;">${(s.session_id || s.id || '').slice(0,12)}…</code></td>
+                <td><span class="badge bg-secondary text-capitalize">${s.channel || '—'}</span></td>
+                <td>${s.message_count || 0}</td>
+                <td class="text-muted small">${s.last_active ? new Date(s.last_active * 1000).toLocaleString() : '—'}</td>
+                <td>
+                    <button class="btn btn-xs btn-outline-danger" style="font-size:0.72rem;padding:1px 6px;"
+                        onclick="singleCellApp.deleteGatewaySession('${s.session_id || s.id}')">
+                        <i class="feather-trash-2"></i>
+                    </button>
+                </td>
+            </tr>`).join('')}
+            </tbody>
+        </table>
+        </div>`;
+    },
+
+    deleteGatewaySession(sid) {
+        if (!confirm(`Delete session ${sid}?`)) return;
+        fetch(`/api/gateway/sessions/${sid}`, { method: 'DELETE' })
+            .then(() => this._loadGatewayStatus())
+            .catch(e => console.error(e));
+    },
+
+    // ── Memory ───────────────────────────────────────────────────────────
+
+    _gatewayMemoryLoaded: false,
+    _gatewayActiveFolderId: null,
+
+    _loadMemoryData(folderId) {
+        this._gatewayMemoryLoaded = true;
+        this._gatewayActiveFolderId = folderId || null;
+        // Load folders
+        fetch('/api/gateway/memory/folders')
+            .then(r => r.ok ? r.json() : { folders: [] })
+            .then(data => {
+                this._gatewayFolders = data.folders || [];
+                this._renderFolderTree(this._gatewayFolders);
+            })
+            .catch(() => this._renderFolderTree([]));
+        // Load documents
+        const url = folderId ? `/api/gateway/memory/documents?folder_id=${folderId}` : '/api/gateway/memory/documents';
+        fetch(url)
+            .then(r => r.ok ? r.json() : { documents: [] })
+            .then(data => this._renderMemoryDocs(data.documents || []))
+            .catch(() => this._renderMemoryDocs([]));
+    },
+
+    _renderFolderTree(folders) {
+        const el = document.getElementById('gw-folder-tree');
+        if (!el) return;
+        const allActive = !this._gatewayActiveFolderId;
+        let html = `<a href="javascript:void(0)" class="d-block py-1 px-2 rounded small ${allActive ? 'fw-semibold text-primary' : 'text-muted'}"
+                onclick="singleCellApp._loadMemoryData(null)">
+                <i class="feather-inbox me-1"></i>All Documents</a>`;
+        folders.forEach(f => {
+            const active = this._gatewayActiveFolderId === f.id;
+            html += `
+            <div class="d-flex align-items-center py-1 px-2 rounded ${active ? 'bg-primary bg-opacity-10' : ''}">
+                <a href="javascript:void(0)" class="flex-grow-1 small ${active ? 'fw-semibold text-primary' : 'text-muted text-decoration-none'}"
+                    onclick="singleCellApp._loadMemoryData(${f.id})">
+                    <i class="feather-folder me-1"></i>${this._esc(f.name)}
+                    <span class="text-muted" style="font-size:0.7rem;">(${f.doc_count || 0})</span>
+                </a>
+            </div>`;
+        });
+        el.innerHTML = html;
+    },
+
+    _renderMemoryDocs(docs) {
+        const el = document.getElementById('gw-memory-docs');
+        if (!el) return;
+        if (!docs.length) {
+            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-file-text" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px;"></i><p>No documents yet.</p></div>`;
+            return;
+        }
+        el.innerHTML = docs.map(doc => `
+        <div class="card mb-2">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div>
+                        <div class="fw-semibold small">${this._esc(doc.title || '(untitled)')}</div>
+                        <div class="text-muted" style="font-size:0.77rem;">${this._esc((doc.content || '').slice(0, 120))}${(doc.content || '').length > 120 ? '…' : ''}</div>
+                        <div class="mt-1">
+                            ${(doc.tags || []).map(t => `<span class="badge bg-secondary me-1" style="font-size:0.7rem;">${this._esc(t)}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="d-flex gap-1 ms-2 flex-shrink-0">
+                        <button class="btn btn-xs btn-outline-secondary" style="font-size:0.72rem;padding:2px 7px;" onclick="singleCellApp.editMemoryDoc(${doc.id})">
+                            <i class="feather-edit-2"></i>
+                        </button>
+                        <button class="btn btn-xs btn-outline-danger" style="font-size:0.72rem;padding:2px 7px;" onclick="singleCellApp.deleteMemoryDoc(${doc.id})">
+                            <i class="feather-trash-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`).join('');
+    },
+
+    searchMemory(q) {
+        if (!q || q.length < 2) { this._loadMemoryData(this._gatewayActiveFolderId); return; }
+        clearTimeout(this._memSearchTimer);
+        this._memSearchTimer = setTimeout(() => {
+            fetch(`/api/gateway/memory/search?q=${encodeURIComponent(q)}`)
+                .then(r => r.ok ? r.json() : { results: [] })
+                .then(data => this._renderMemoryDocs(data.results || []))
+                .catch(() => {});
+        }, 300);
+    },
+
+    showMemoryDocModal(doc) {
+        const modal = document.getElementById('gw-doc-modal');
+        if (!modal) return;
+        // Populate folder select
+        const folderSel = document.getElementById('gw-doc-folder');
+        if (folderSel) {
+            folderSel.innerHTML = '<option value="">— root —</option>' +
+                (this._gatewayFolders || []).map(f => `<option value="${f.id}">${this._esc(f.name)}</option>`).join('');
+        }
+        if (doc) {
+            document.getElementById('gw-doc-modal-title').textContent = 'Edit Document';
+            document.getElementById('gw-doc-edit-id').value = doc.id;
+            document.getElementById('gw-doc-title').value = doc.title || '';
+            document.getElementById('gw-doc-folder').value = doc.folder_id || '';
+            document.getElementById('gw-doc-tags').value = (doc.tags || []).join(', ');
+            document.getElementById('gw-doc-content').value = doc.content || '';
+        } else {
+            document.getElementById('gw-doc-modal-title').textContent = 'New Memory Document';
+            document.getElementById('gw-doc-edit-id').value = '';
+            document.getElementById('gw-doc-title').value = '';
+            document.getElementById('gw-doc-folder').value = this._gatewayActiveFolderId || '';
+            document.getElementById('gw-doc-tags').value = '';
+            document.getElementById('gw-doc-content').value = '';
+        }
+        modal.style.display = 'block';
+    },
+
+    hideMemoryDocModal() {
+        const modal = document.getElementById('gw-doc-modal');
+        if (modal) modal.style.display = 'none';
+    },
+
+    saveMemoryDoc() {
+        const id = document.getElementById('gw-doc-edit-id').value;
+        const body = {
+            title: document.getElementById('gw-doc-title').value.trim(),
+            folder_id: document.getElementById('gw-doc-folder').value || null,
+            tags: document.getElementById('gw-doc-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+            content: document.getElementById('gw-doc-content').value,
+        };
+        if (!body.title) { alert('Title is required'); return; }
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `/api/gateway/memory/documents/${id}` : '/api/gateway/memory/documents';
+        fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) })
+            .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+            .then(() => {
+                this.hideMemoryDocModal();
+                this._gatewayMemoryLoaded = false;
+                this._loadMemoryData(this._gatewayActiveFolderId);
+            })
+            .catch(e => alert(`Save failed: ${e.message}`));
+    },
+
+    editMemoryDoc(id) {
+        fetch(`/api/gateway/memory/documents/${id}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => { if (data) this.showMemoryDocModal(data); })
+            .catch(() => {});
+    },
+
+    deleteMemoryDoc(id) {
+        if (!confirm('Delete this document?')) return;
+        fetch(`/api/gateway/memory/documents/${id}`, { method: 'DELETE' })
+            .then(() => { this._gatewayMemoryLoaded = false; this._loadMemoryData(this._gatewayActiveFolderId); })
+            .catch(e => alert(`Delete failed: ${e.message}`));
+    },
+
+    showFolderModal() {
+        const modal = document.getElementById('gw-folder-modal');
+        if (modal) { document.getElementById('gw-folder-name').value = ''; modal.style.display = 'flex'; }
+    },
+
+    saveFolder() {
+        const name = document.getElementById('gw-folder-name').value.trim();
+        if (!name) { alert('Name required'); return; }
+        fetch('/api/gateway/memory/folders', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name }),
+        })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(() => {
+            document.getElementById('gw-folder-modal').style.display = 'none';
+            this._gatewayMemoryLoaded = false;
+            this._loadMemoryData(null);
+        })
+        .catch(e => alert(`Failed: ${e.message}`));
+    },
+
+    _esc(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    },
+
+    // ── Channel Configuration ──────────────────────────────────────────────
+
+    _gwConfig: null,          // cached raw config from server
+    _gwProcesses: [],         // cached process list
+    _gwSecretsSet: {},        // {section__field: bool}
+
+    loadChannelConfig() {
+        fetch('/api/gateway/channels/config')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) { this._renderChannelConfigError(); return; }
+                this._gwConfig = data.config || {};
+                this._gwProcesses = data.processes || [];
+                this._gwSecretsSet = data.secrets_set || {};
+
+                // Fill LLM fields
+                const m = document.getElementById('gw-llm-model');
+                const e = document.getElementById('gw-llm-endpoint');
+                const badge = document.getElementById('gw-llm-key-badge');
+                const pathEl = document.getElementById('gw-config-path');
+                if (m) m.value = this._gwConfig.model || '';
+                if (e) e.value = this._gwConfig.endpoint || '';
+                if (badge) {
+                    badge.textContent = data.api_key_set ? ('set: ' + (data.api_key_masked || '****')) : 'not set';
+                    badge.className = 'badge ms-1 ' + (data.api_key_set ? 'bg-success' : 'bg-secondary');
+                    badge.style.fontSize = '0.68rem';
+                }
+                if (pathEl) pathEl.textContent = data.config_path || '';
+
+                // Render channel cards
+                this._renderChannelCards();
+            })
+            .catch(() => this._renderChannelConfigError());
+    },
+
+    _renderChannelConfigError() {
+        const el = document.getElementById('gw-channel-cards');
+        if (el) el.innerHTML = `<div class="alert alert-warning"><i class="feather-alert-circle me-2"></i>Could not load config. Ensure the gateway backend is running.</div>`;
+    },
+
+    _channelRunning(ch) {
+        return this._gwProcesses.some(p => p.channel === ch && p.running);
+    },
+
+    _renderChannelCards() {
+        const channels = [
+            { id: 'telegram',  label: 'Telegram',  icon: 'feather-send',      color: '#2AABEE' },
+            { id: 'feishu',    label: 'Feishu / Lark', icon: 'feather-feather', color: '#3370FF' },
+            { id: 'qq',        label: 'QQ Bot',    icon: 'feather-message-square', color: '#1AABE6' },
+            { id: 'imessage',  label: 'iMessage',  icon: 'feather-message-circle', color: '#34C759' },
+        ];
+        const el = document.getElementById('gw-channel-cards');
+        if (!el) return;
+        el.innerHTML = channels.map(ch => this._channelCardHTML(ch)).join('');
+        if (window.feather) feather.replace({ 'stroke-width': 2 });
+    },
+
+    _channelCardHTML(ch) {
+        const running = this._channelRunning(ch.id);
+        const cfg = (this._gwConfig || {})[ch.id] || {};
+        const statusBadge = running
+            ? `<span class="badge bg-success">running</span>`
+            : `<span class="badge bg-secondary">stopped</span>`;
+        const startStopBtn = running
+            ? `<button class="btn btn-sm btn-danger" onclick="singleCellApp.stopChannel('${ch.id}')"><i class="feather-square me-1"></i>Stop</button>`
+            : `<button class="btn btn-sm btn-success" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>Start</button>`;
+
+        return `
+        <div class="card mb-3" id="gw-card-${ch.id}">
+            <div class="card-header py-2 d-flex align-items-center justify-content-between"
+                 style="cursor:pointer;" onclick="singleCellApp._toggleChannelCard('${ch.id}')">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="${ch.icon}" style="color:${ch.color};"></i>
+                    <span class="fw-semibold small">${ch.label}</span>
+                    ${statusBadge}
+                </div>
+                <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.testChannel('${ch.id}')">
+                        <i class="feather-zap me-1"></i>Test
+                    </button>
+                    ${startStopBtn}
+                    <i class="feather-chevron-down" id="gw-chevron-${ch.id}"></i>
+                </div>
+            </div>
+            <div id="gw-body-${ch.id}" class="card-body p-3" style="display:none;">
+                ${this._channelFormHTML(ch.id, cfg)}
+                <div id="gw-ch-result-${ch.id}" class="mt-2" style="font-size:0.82rem;display:none;"></div>
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.toggleChannelLogs('${ch.id}')">
+                        <i class="feather-terminal me-1"></i>Logs
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="singleCellApp.testChannel('${ch.id}')">
+                            <i class="feather-zap me-1"></i>Test Connection
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveChannelConfig('${ch.id}')">
+                            <i class="feather-save me-1"></i>Save
+                        </button>
+                    </div>
+                </div>
+                <!-- Log panel (hidden by default) -->
+                <div id="gw-log-${ch.id}" style="display:none;margin-top:10px;">
+                    <div style="background:#1a1a2e;color:#a8d8a8;font-size:0.73rem;font-family:monospace;
+                                border-radius:6px;padding:10px 12px;max-height:220px;overflow-y:auto;
+                                white-space:pre-wrap;word-break:break-all;" id="gw-log-body-${ch.id}">
+                        No output yet.
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    },
+
+    _channelFormHTML(ch, cfg) {
+        const secrets = this._gwSecretsSet || {};
+        const isSet = (section, f) => secrets[`${section}__${f}`] || false;
+
+        // Regular text field
+        const field = (id, label, type, val, placeholder, hint) => `
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold mb-1">${label}</label>
+                <input type="${type}" id="gw-field-${ch}-${id}" class="form-control form-control-sm"
+                       value="${this._esc(val || '')}" placeholder="${this._esc(placeholder || '')}">
+                ${hint ? `<div class="form-text" style="font-size:0.72rem;">${hint}</div>` : ''}
+            </div>`;
+
+        // Secret field — always blank; shows "already set" badge if configured
+        const secret = (id, label, section, hint) => {
+            const already = isSet(section, id);
+            return `
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold mb-1">${label}
+                    ${already ? '<span class="badge bg-success ms-1" style="font-size:0.65rem;">set</span>' : '<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">not set</span>'}
+                </label>
+                <input type="password" id="gw-field-${ch}-${id}" class="form-control form-control-sm"
+                       value="" placeholder="${already ? '(already set — leave blank to keep)' : 'Enter value'}">
+                ${hint ? `<div class="form-text" style="font-size:0.72rem;">${hint}</div>` : ''}
+            </div>`;
+        };
+
+        const checkbox = (id, label, checked) => `
+            <div class="col-md-6 d-flex align-items-center pt-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="gw-field-${ch}-${id}" ${checked ? 'checked' : ''}>
+                    <label class="form-check-label small" for="gw-field-${ch}-${id}">${label}</label>
+                </div>
+            </div>`;
+        const select = (id, label, options, val) => `
+            <div class="col-md-6">
+                <label class="form-label small fw-semibold mb-1">${label}</label>
+                <select id="gw-field-${ch}-${id}" class="form-select form-select-sm">
+                    ${options.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+                </select>
+            </div>`;
+
+        if (ch === 'telegram') return `<div class="row g-2">
+            ${secret('token','Bot Token','telegram','Get from @BotFather — set TELEGRAM_BOT_TOKEN env var or enter here')}
+            ${field('allowed_users','Allowed Users <span class="text-muted fw-normal">(comma-sep usernames/IDs)</span>','text', (cfg.allowed_users||[]).join(', '), '@username or 123456789', 'Leave empty to allow all users')}
+        </div>`;
+
+        if (ch === 'feishu') return `<div class="row g-2">
+            ${field('app_id','App ID','text', cfg.app_id||'', 'cli_xxxxxxxxxx', '')}
+            ${secret('app_secret','App Secret','feishu','Set FEISHU_APP_SECRET env var or enter here')}
+            ${select('connection_mode','Connection Mode',['websocket','webhook'], cfg.connection_mode||'websocket')}
+            ${secret('verification_token','Verification Token','feishu','Webhook only — optional')}
+            ${secret('encrypt_key','Encrypt Key','feishu','Optional')}
+            ${field('host','Webhook Host','text', cfg.host||'0.0.0.0', '0.0.0.0', 'webhook mode only')}
+            ${field('port','Webhook Port','number', cfg.port||8080, '8080', '')}
+            ${field('path','Webhook Path','text', cfg.path||'/feishu/events', '/feishu/events', '')}
+        </div>`;
+
+        if (ch === 'qq') return `<div class="row g-2">
+            ${field('app_id','App ID','text', cfg.app_id||'', 'QQ Bot AppID (numeric)', 'From QQ Open Platform → My Apps')}
+            ${secret('client_secret','Client Secret','qq','Set QQ_CLIENT_SECRET env var or enter here')}
+            ${field('image_host','Image Host <span class="text-muted fw-normal">(for figures)</span>','text', cfg.image_host||'', 'http://YOUR_IP:8081', 'Required to send charts; leave empty to skip')}
+            ${field('image_server_port','Image Server Port','number', cfg.image_server_port||8081, '8081', '')}
+            ${checkbox('markdown','Enable Markdown replies (msg_type=2, requires QQ Open Platform permission)', cfg.markdown)}
+        </div>`;
+
+        if (ch === 'imessage') return `<div class="row g-2">
+            ${field('cli_path','imsg CLI Path','text', cfg.cli_path||'imsg', 'imsg', 'Path to the imsg binary')}
+            ${field('db_path','chat.db Path','text', cfg.db_path||'~/Library/Messages/chat.db', '~/Library/Messages/chat.db', '')}
+            ${checkbox('include_attachments','Include attachment metadata', cfg.include_attachments)}
+        </div>`;
+
+        return '';
+    },
+
+    _toggleChannelCard(ch) {
+        const body = document.getElementById(`gw-body-${ch}`);
+        const chevron = document.getElementById(`gw-chevron-${ch}`);
+        if (!body) return;
+        const open = body.style.display !== 'none';
+        body.style.display = open ? 'none' : 'block';
+        if (chevron) {
+            chevron.className = open ? 'feather-chevron-down' : 'feather-chevron-up';
+            if (window.feather) feather.replace({ 'stroke-width': 2 });
+        }
+    },
+
+    _getChannelFormValues(ch) {
+        const val = id => {
+            const el = document.getElementById(`gw-field-${ch}-${id}`);
+            if (!el) return null;
+            return el.type === 'checkbox' ? el.checked : el.value;
+        };
+        if (ch === 'telegram') return {
+            token: val('token'),
+            allowed_users: (val('allowed_users') || '').split(',').map(s => s.trim()).filter(Boolean),
+        };
+        if (ch === 'feishu') return {
+            app_id: val('app_id'), app_secret: val('app_secret'),
+            connection_mode: val('connection_mode'),
+            verification_token: val('verification_token'), encrypt_key: val('encrypt_key'),
+            host: val('host'), port: parseInt(val('port')) || 8080, path: val('path'),
+        };
+        if (ch === 'qq') return {
+            app_id: val('app_id'), client_secret: val('client_secret'),
+            image_host: val('image_host'),
+            image_server_port: parseInt(val('image_server_port')) || 8081,
+            markdown: val('markdown'),
+        };
+        if (ch === 'imessage') return {
+            cli_path: val('cli_path'), db_path: val('db_path'),
+            include_attachments: val('include_attachments'),
+        };
+        return {};
+    },
+
+    _showChResult(ch, ok, msg) {
+        const el = document.getElementById(`gw-ch-result-${ch}`);
+        if (!el) return;
+        el.style.display = 'block';
+        el.innerHTML = `<span class="${ok ? 'text-success' : 'text-danger'}">
+            <i class="${ok ? 'feather-check-circle' : 'feather-x-circle'} me-1"></i>${this._esc(msg)}</span>`;
+        if (window.feather) feather.replace({ 'stroke-width': 2 });
+    },
+
+    saveLLMConfig() {
+        const model = (document.getElementById('gw-llm-model') || {}).value || '';
+        const endpoint = (document.getElementById('gw-llm-endpoint') || {}).value || '';
+        const apiKey = (document.getElementById('gw-llm-api-key') || {}).value || '';
+        const cfg = Object.assign({}, this._gwConfig || {}, { model, endpoint: endpoint || null });
+        const resultEl = document.getElementById('gw-llm-save-result');
+        if (resultEl) { resultEl.style.display = 'none'; }
+        fetch('/api/gateway/channels/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ config: cfg, api_key: apiKey }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (resultEl) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = data.ok
+                    ? `<span class="text-success"><i class="feather-check-circle me-1"></i>Saved to ${data.path}</span>`
+                    : `<span class="text-danger"><i class="feather-x-circle me-1"></i>${this._esc(data.error || 'Save failed')}</span>`;
+                if (window.feather) feather.replace({ 'stroke-width': 2 });
+            }
+            if (data.ok) {
+                this._gwConfig = cfg;
+                if (apiKey) document.getElementById('gw-llm-api-key').value = '';
+                this.loadChannelConfig(); // refresh badge
+            }
+        })
+        .catch(e => {
+            if (resultEl) { resultEl.style.display = 'block'; resultEl.innerHTML = `<span class="text-danger">${e.message}</span>`; }
+        });
+    },
+
+    saveChannelConfig(ch) {
+        const chVals = this._getChannelFormValues(ch);
+        const cfg = Object.assign({}, this._gwConfig || {});
+        cfg[ch] = Object.assign({}, cfg[ch] || {}, chVals);
+        fetch('/api/gateway/channels/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ config: cfg }),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                this._gwConfig = cfg;
+                this._showChResult(ch, true, `Saved to ${data.path}`);
+            } else {
+                this._showChResult(ch, false, data.error || 'Save failed');
+            }
+        })
+        .catch(e => this._showChResult(ch, false, e.message));
+    },
+
+    testChannel(ch) {
+        // Open the card first so the result is visible
+        const body = document.getElementById(`gw-body-${ch}`);
+        if (body && body.style.display === 'none') this._toggleChannelCard(ch);
+
+        const resultEl = document.getElementById(`gw-ch-result-${ch}`);
+        if (resultEl) {
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = `<span class="text-muted"><i class="feather-loader me-1"></i>Testing…</span>`;
+            if (window.feather) feather.replace({ 'stroke-width': 2 });
+        }
+        const body_ = this._getChannelFormValues(ch);
+        fetch(`/api/gateway/channels/${ch}/test`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body_),
+        })
+        .then(r => r.json())
+        .then(data => this._showChResult(ch, data.ok, data.message || data.error || ''))
+        .catch(e => this._showChResult(ch, false, e.message));
+    },
+
+    startChannel(ch) {
+        const btn = document.querySelector(`#gw-card-${ch} .btn-success`);
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="feather-loader me-1"></i>Starting…'; if (window.feather) feather.replace({ 'stroke-width': 2 }); }
+        // Save current form values first, then start
+        const chVals = this._getChannelFormValues(ch);
+        const cfg = Object.assign({}, this._gwConfig || {});
+        cfg[ch] = Object.assign({}, cfg[ch] || {}, chVals);
+        fetch('/api/gateway/channels/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ config: cfg }),
+        })
+        .then(() => fetch(`/api/gateway/channels/${ch}/start`, { method: 'POST' }))
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
+                this._gwProcesses.push({ channel: ch, running: true, pid: data.pid });
+                this._showChResult(ch, true, data.message || `Started (pid=${data.pid})`);
+            } else {
+                this._showChResult(ch, false, data.error || 'Start failed');
+            }
+            this._renderChannelCards();
+        })
+        .catch(e => { this._showChResult(ch, false, e.message); this._renderChannelCards(); });
+    },
+
+    stopChannel(ch) {
+        fetch(`/api/gateway/channels/${ch}/stop`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
+                this._showChResult(ch, data.ok, data.message || data.error || '');
+                // Stop log polling
+                if (this._logPollers && this._logPollers[ch]) {
+                    clearInterval(this._logPollers[ch]);
+                    delete this._logPollers[ch];
+                }
+                this._renderChannelCards();
+            })
+            .catch(e => this._showChResult(ch, false, e.message));
+    },
+
+    _logPollers: {},
+
+    toggleChannelLogs(ch) {
+        const panel = document.getElementById(`gw-log-${ch}`);
+        if (!panel) return;
+        const open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        if (open) {
+            // Stop polling
+            if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
+            return;
+        }
+        // Start polling logs every 2 s
+        const fetchLogs = () => {
+            fetch(`/api/gateway/channels/${ch}/logs`)
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    const body = document.getElementById(`gw-log-body-${ch}`);
+                    if (!body) return;
+                    if (!data) { body.textContent = 'Log endpoint not available.'; return; }
+                    if (data.logs) {
+                        // Always show buffered logs — crash output survives process exit
+                        const status = data.running ? '' : '\n[process has exited]';
+                        body.textContent = data.logs + status;
+                        body.scrollTop = body.scrollHeight;
+                        if (!data.running) {
+                            if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
+                        }
+                    } else if (!data.running) {
+                        body.textContent = 'Process not running. Click Start to launch, then open Logs.';
+                        if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
+                    } else {
+                        body.textContent = '(no output yet — waiting...)';
+                    }
+                })
+                .catch(() => {});
+        };
+        fetchLogs();
+        this._logPollers[ch] = setInterval(fetchLogs, 2000);
     },
 
     loadSkills(force = false) {

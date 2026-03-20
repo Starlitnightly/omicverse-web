@@ -58,6 +58,7 @@ packages = [
   "omicverse_web.routes",
   "omicverse_web.services",
   "omicverse_web.utils",
+  "omicverse_web.gateway",
   "omicverse_web.server",
   "omicverse_web.server.common",
   "omicverse_web.server.common.fbs",
@@ -70,6 +71,7 @@ omicverse_web = "."
 "omicverse_web.routes" = "routes"
 "omicverse_web.services" = "services"
 "omicverse_web.utils" = "utils"
+"omicverse_web.gateway" = "gateway"
 "omicverse_web.server" = "server"
 "omicverse_web.server.common" = "server/common"
 "omicverse_web.server.common.fbs" = "server/common/fbs"

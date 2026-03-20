@@ -38,6 +38,10 @@ from utils.notebook_helpers import ensure_default_notebook
 # Import blueprints
 from routes import kernel, files, data, notebooks, skills, account
 from routes.terminal import terminal_bp
+from gateway.routes import gateway_bp
+from gateway.memory_routes import memory_bp
+from gateway.panel_routes import panel_bp
+from gateway.channel_config_routes import channel_config_bp
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -93,6 +97,8 @@ class AppState:
         self.kernel_sessions = {}
         self.notebook_root = os.getcwd()
         self.file_root = Path(self.notebook_root).resolve()
+        # Gateway mode: set to a GatewayChannelRegistry when running with --with-web
+        self.gateway_registry = None
 
 # Create global state instance
 state = AppState()
@@ -282,6 +288,12 @@ app.register_blueprint(account.bp, url_prefix='/api/account')
 
 # Terminal blueprint (PTY-based interactive shell)
 app.register_blueprint(terminal_bp)
+
+# Gateway blueprints — unified channel + web context hub
+app.register_blueprint(gateway_bp, url_prefix="/api/gateway")
+app.register_blueprint(memory_bp, url_prefix="/api/gateway/memory")
+app.register_blueprint(panel_bp, url_prefix="/gateway/panel")
+app.register_blueprint(channel_config_bp, url_prefix="/api/gateway/channels")
 
 
 # ============================================================================
