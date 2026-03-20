@@ -6,8 +6,23 @@ import threading
 from typing import Any, Optional
 
 
-_SUPPORTED_CHANNELS = ("qq",)
+_SUPPORTED_CHANNELS = ("telegram", "feishu", "qq", "imessage")
 _LOG_BUF_SIZE = 200
+
+
+def _channel_configured(channel: str, cfg: dict) -> bool:
+    if channel == "telegram":
+        return bool((cfg.get("telegram") or {}).get("token"))
+    if channel == "feishu":
+        fc = cfg.get("feishu") or {}
+        return bool(fc.get("app_id") and fc.get("app_secret"))
+    if channel == "qq":
+        qc = cfg.get("qq") or {}
+        return bool(qc.get("app_id") and qc.get("client_secret"))
+    if channel == "imessage":
+        ic = cfg.get("imessage") or {}
+        return bool(ic.get("cli_path") or ic.get("db_path"))
+    return False
 
 
 class _ChannelLogHandler(logging.Handler):
@@ -18,7 +33,14 @@ class _ChannelLogHandler(logging.Handler):
         self.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
 
     def emit(self, record: logging.LogRecord) -> None:
-        if self._channel == "qq" and not record.name.startswith("omicverse.jarvis.qq"):
+        name = record.name or ""
+        if self._channel == "qq" and not name.startswith("omicverse.jarvis.qq"):
+            return
+        if self._channel == "telegram" and not name.startswith("omicverse.jarvis"):
+            return
+        if self._channel == "feishu" and not name.startswith("omicverse.jarvis.feishu"):
+            return
+        if self._channel == "imessage" and not name.startswith("omicverse.jarvis.imessage"):
             return
         try:
             self._buffer.append(self.format(record) + "\n")
@@ -27,7 +49,7 @@ class _ChannelLogHandler(logging.Handler):
 
 
 class InProcessChannelManager:
-    """Run selected gateway channels inside the gateway process."""
+    """Run configured channels inside the gateway process."""
 
     def __init__(self, session_manager: Any) -> None:
         self._sm = session_manager
@@ -45,7 +67,7 @@ class InProcessChannelManager:
         snapshot: list[dict] = []
         with self._lock:
             for channel in _SUPPORTED_CHANNELS:
-                configured = bool((cfg.get(channel) or {}).get("app_id") and (cfg.get(channel) or {}).get("client_secret")) if channel == "qq" else False
+                configured = _channel_configured(channel, cfg)
                 state = dict(self._states.get(channel, {}))
                 if not state:
                     state = {
@@ -61,8 +83,9 @@ class InProcessChannelManager:
 
     def auto_start_configured(self, cfg: dict, api_key: Optional[str] = None) -> list[dict]:
         results: list[dict] = []
-        if self.supports("qq") and bool((cfg.get("qq") or {}).get("app_id") and (cfg.get("qq") or {}).get("client_secret")):
-            results.append(self.start_channel("qq", cfg=cfg, api_key=api_key, source="gateway-startup"))
+        for channel in _SUPPORTED_CHANNELS:
+            if _channel_configured(channel, cfg):
+                results.append(self.start_channel(channel, cfg=cfg, api_key=api_key, source="gateway-startup"))
         return results
 
     def start_channel(
@@ -75,15 +98,9 @@ class InProcessChannelManager:
     ) -> dict:
         if not self.supports(channel):
             return {"ok": False, "error": f"{channel} is not supported by the in-process manager"}
-        if channel != "qq":
-            return {"ok": False, "error": f"{channel} is not implemented"}
-
-        qq_cfg = dict(cfg.get("qq") or {})
-        app_id = qq_cfg.get("app_id") or ""
-        client_secret = qq_cfg.get("client_secret") or ""
-        if not app_id or not client_secret:
-            self._set_state(channel, status="failed", running=False, error="QQ app_id/client_secret not configured")
-            return {"ok": False, "error": "QQ app_id/client_secret not configured"}
+        if not _channel_configured(channel, cfg):
+            self._set_state(channel, status="failed", running=False, error=f"{channel} is not configured")
+            return {"ok": False, "error": f"{channel} is not configured"}
 
         with self._lock:
             existing = self._threads.get(channel)
@@ -100,17 +117,7 @@ class InProcessChannelManager:
 
             def _runner() -> None:
                 try:
-                    from omicverse.jarvis.channels.qq import run_qq_bot
-
-                    run_qq_bot(
-                        app_id=app_id,
-                        client_secret=client_secret,
-                        session_manager=self._sm,
-                        markdown=bool(qq_cfg.get("markdown")),
-                        image_host=qq_cfg.get("image_host") or None,
-                        image_server_port=int(qq_cfg.get("image_server_port") or 8081),
-                        stop_event=stop_event,
-                    )
+                    self._run_channel(channel, cfg, stop_event)
                     final_status = "stopped" if stop_event.is_set() else "failed"
                     self._set_state(channel, status=final_status, running=False)
                 except Exception as exc:
@@ -140,6 +147,73 @@ class InProcessChannelManager:
             thread.start()
             return {"ok": True, "message": f"Started {channel} in-process", "thread_name": thread.name}
 
+    def _run_channel(self, channel: str, cfg: dict, stop_event: threading.Event) -> None:
+        if channel == "telegram":
+            from omicverse.jarvis.channels.telegram import AccessControl, run_bot
+
+            tc = dict(cfg.get("telegram") or {})
+            run_bot(
+                token=str(tc.get("token") or ""),
+                session_manager=self._sm,
+                access_control=AccessControl([str(x) for x in (tc.get("allowed_users") or [])]),
+                verbose=False,
+                stop_event=stop_event,
+            )
+            return
+
+        if channel == "feishu":
+            from omicverse.jarvis.channels.feishu import run_feishu_bot, run_feishu_ws_bot
+
+            fc = dict(cfg.get("feishu") or {})
+            common = dict(
+                app_id=str(fc.get("app_id") or ""),
+                app_secret=str(fc.get("app_secret") or ""),
+                session_manager=self._sm,
+                verification_token=fc.get("verification_token") or None,
+                encrypt_key=fc.get("encrypt_key") or None,
+                stop_event=stop_event,
+            )
+            if str(fc.get("connection_mode") or "websocket").lower() == "webhook":
+                run_feishu_bot(
+                    **common,
+                    host=str(fc.get("host") or "0.0.0.0"),
+                    port=int(fc.get("port") or 8080),
+                    path=str(fc.get("path") or "/feishu/events"),
+                )
+            else:
+                run_feishu_ws_bot(**common)
+            return
+
+        if channel == "qq":
+            from omicverse.jarvis.channels.qq import run_qq_bot
+
+            qc = dict(cfg.get("qq") or {})
+            run_qq_bot(
+                app_id=str(qc.get("app_id") or ""),
+                client_secret=str(qc.get("client_secret") or ""),
+                session_manager=self._sm,
+                markdown=bool(qc.get("markdown")),
+                image_host=qc.get("image_host") or None,
+                image_server_port=int(qc.get("image_server_port") or 8081),
+                stop_event=stop_event,
+            )
+            return
+
+        if channel == "imessage":
+            from omicverse.jarvis.channels.imessage import run_imessage_bot
+
+            ic = dict(cfg.get("imessage") or {})
+            run_imessage_bot(
+                session_manager=self._sm,
+                cli_path=str(ic.get("cli_path") or "imsg"),
+                db_path=ic.get("db_path") or None,
+                include_attachments=bool(ic.get("include_attachments")),
+                stop_event=stop_event,
+            )
+            return
+
+        raise RuntimeError(f"Unsupported channel: {channel}")
+
     def stop_channel(self, channel: str) -> dict:
         with self._lock:
             stop_event = self._stop_events.get(channel)
@@ -159,10 +233,7 @@ class InProcessChannelManager:
             return "".join(buf)
 
     def stop_all(self) -> list[dict]:
-        results: list[dict] = []
-        for channel in _SUPPORTED_CHANNELS:
-            results.append(self.stop_channel(channel))
-        return results
+        return [self.stop_channel(channel) for channel in _SUPPORTED_CHANNELS]
 
     def _set_state(self, channel: str, **state: Any) -> None:
         with self._lock:
