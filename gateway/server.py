@@ -62,6 +62,8 @@ class GatewayServer:
         channel_registry=None,
         memory_db_path: Optional[str] = None,
         channels: Optional[list] = None,
+        auto_start_channels: bool = False,
+        jarvis_config_path: Optional[str] = None,
         debug: bool = False,
     ) -> Tuple[threading.Thread, str]:
         """Start the Flask app in a background daemon thread.
@@ -112,6 +114,17 @@ class GatewayServer:
                 flask_app.config["GATEWAY_MEMORY_DB_PATH"] = memory_db_path
             if channels is not None:
                 flask_app.config["GATEWAY_ACTIVE_CHANNELS"] = list(channels)
+            if jarvis_config_path is not None:
+                flask_app.config["GATEWAY_JARVIS_CONFIG_PATH"] = jarvis_config_path
+
+            if auto_start_channels:
+                try:
+                    from gateway.channel_config_routes import auto_start_configured_channels
+
+                    with flask_app.app_context():
+                        auto_start_configured_channels()
+                except Exception:
+                    logger.exception("GatewayServer: auto-starting configured channels failed")
 
             flask_app.run(
                 host=host,

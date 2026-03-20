@@ -42,16 +42,24 @@ def _get_session_manager():
 # --------------------------------------------------------------------------
 
 def _get_active_channels() -> list[dict]:
-    """Return a merged channel list: registry sessions + startup-time channel types."""
+    """Return a merged channel list with live process states when available."""
+    try:
+        from gateway.channel_config_routes import list_channel_states
+        process_states = list_channel_states()
+    except Exception:
+        process_states = []
+
     registry = _get_registry()
     # Per-session entries from the registry (populated when messages arrive)
     per_session = registry.list_channels() if registry is not None else []
 
-    # Startup-time channel type list (set by jarvis CLI at launch)
-    active_types: list[str] = current_app.config.get("GATEWAY_ACTIVE_CHANNELS") or []
+    # Build a set of already-known channel names from the live process snapshot
+    known_names = {c["channel"] for c in process_states}
+    live_names = set(known_names)
 
-    # Build a set of already-known channel names from per-session entries
-    known_names = {c["channel"] for c in per_session}
+    # Also include names seen in per-session entries, even if the process
+    # snapshot is unavailable (legacy in-process gateway mode).
+    known_names.update(c["channel"] for c in per_session)
 
     # Also derive channels from session messages ([channel] prefix tagging)
     sm = _get_session_manager()
@@ -81,19 +89,10 @@ def _get_active_channels() -> list[dict]:
         except Exception:
             pass
 
-    # Add startup-type entries for channels not yet represented by any session
-    for ch_name in active_types:
-        if ch_name not in known_names:
-            per_session.append({
-                "channel": ch_name,
-                "status": "starting",
-                "session_count": 0,
-            })
-            known_names.add(ch_name)
-
-    # Aggregate per-channel stats
+    # Aggregate per-channel stats. Prefer live process state; fall back to
+    # per-session entries so legacy in-process gateway mode still renders.
     channel_map: dict[str, dict] = {}
-    for entry in per_session:
+    for entry in process_states + per_session:
         ch = entry.get("channel", "unknown")
         if ch not in channel_map:
             channel_map[ch] = {
@@ -102,10 +101,23 @@ def _get_active_channels() -> list[dict]:
                 "status": entry.get("status", "connected"),
                 "session_count": 0,
                 "sessions": [],
+                "running": bool(entry.get("running", False)),
+                "configured": bool(entry.get("configured", False)),
+                "can_start": bool(entry.get("can_start", False)),
+                "pid": entry.get("pid"),
+                "error": entry.get("error"),
             }
         if entry.get("session_id"):
             channel_map[ch]["sessions"].append(entry["session_id"])
         channel_map[ch]["session_count"] = len(channel_map[ch]["sessions"])
+        # Live process state should win over derived state from sessions.
+        if ch in live_names:
+            channel_map[ch]["status"] = entry.get("status", channel_map[ch]["status"])
+            channel_map[ch]["running"] = bool(entry.get("running", channel_map[ch]["running"]))
+            channel_map[ch]["configured"] = bool(entry.get("configured", channel_map[ch]["configured"]))
+            channel_map[ch]["can_start"] = bool(entry.get("can_start", channel_map[ch]["can_start"]))
+            channel_map[ch]["pid"] = entry.get("pid", channel_map[ch]["pid"])
+            channel_map[ch]["error"] = entry.get("error", channel_map[ch]["error"])
 
     return list(channel_map.values())
 
@@ -118,7 +130,7 @@ def gateway_status():
     return jsonify(
         {
             "status": "running",
-            "gateway_mode": registry is not None,
+            "gateway_mode": bool(registry) or bool(channels),
             "channel_count": len(channels),
             "channels": channels,
         }

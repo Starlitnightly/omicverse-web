@@ -928,18 +928,31 @@ Object.assign(SingleCellAnalysis.prototype, {
             this._loadMemoryData();
         }
         if (tab === 'channels') {
-            this.loadChannelConfig();
+            if (this._gwConfig) {
+                this._refreshChannelStates();
+            } else {
+                this.loadChannelConfig();
+            }
         }
     },
 
     refreshGateway() {
         this._gatewayLoaded = true;
         this._loadGatewayStatus();
+        if (!this._gatewayAutoRefreshTimer) {
+            this._gatewayAutoRefreshTimer = setInterval(() => {
+                if (this._gatewayLoaded) this.refreshGateway();
+            }, 5000);
+        }
         if (this._gatewayActiveTab === 'memory') {
             this._loadMemoryData();
         }
         if (this._gatewayActiveTab === 'channels') {
-            this.loadChannelConfig();
+            if (this._gwConfig) {
+                this._refreshChannelStates();
+            } else {
+                this.loadChannelConfig();
+            }
         }
     },
 
@@ -956,13 +969,43 @@ Object.assign(SingleCellAnalysis.prototype, {
         });
     },
 
+    _refreshChannelStates() {
+        fetch('/api/gateway/channels/processes')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data && Array.isArray(data.processes)) {
+                    this._gwProcesses = data.processes;
+                    this._renderChannelCards();
+                }
+            })
+            .catch(() => {});
+    },
+
+    _gatewayStatusTheme(status) {
+        const s = status || 'stopped';
+        if (s === 'running') {
+            return { bg: 'var(--bs-success-bg-subtle,#d1e7dd)', color: 'var(--bs-success-text,#0a3622)', label: 'running' };
+        }
+        if (s === 'starting') {
+            return { bg: 'var(--bs-warning-bg-subtle,#fff3cd)', color: 'var(--bs-warning-text,#664d03)', label: 'starting' };
+        }
+        if (s === 'failed') {
+            return { bg: 'var(--bs-danger-bg-subtle,#f8d7da)', color: 'var(--bs-danger-text,#842029)', label: 'failed' };
+        }
+        if (s === 'not_configured') {
+            return { bg: 'var(--bs-dark-bg-subtle,#ced4da)', color: 'var(--bs-dark-text,#212529)', label: 'not configured' };
+        }
+        return { bg: 'var(--bs-secondary-bg-subtle,#e9ecef)', color: 'var(--bs-secondary-text,#495057)', label: s };
+    },
+
     _renderGatewayOverview(status, sessions, memStats) {
         const channels = (status && status.channels) ? status.channels : [];
+        const activeChannels = channels.filter(ch => (typeof ch === 'object' ? (ch.status || 'connected') : 'connected') !== 'not_configured');
         const sessionList = (sessions && sessions.sessions) ? sessions.sessions : [];
         const memDocs = (memStats && memStats.total_documents != null) ? memStats.total_documents : '—';
 
         const el = id => document.getElementById(id);
-        if (el('gw-stat-channels')) el('gw-stat-channels').textContent = channels.length;
+        if (el('gw-stat-channels')) el('gw-stat-channels').textContent = activeChannels.length;
         if (el('gw-stat-sessions')) el('gw-stat-sessions').textContent = sessionList.length;
         if (el('gw-stat-memories')) el('gw-stat-memories').textContent = memDocs;
 
@@ -982,15 +1025,13 @@ Object.assign(SingleCellAnalysis.prototype, {
                         ${channels.map(ch => {
                             const chName = (typeof ch === 'string') ? ch : (ch.name || ch.channel || '?');
                             const chStatus = (typeof ch === 'object') ? (ch.status || 'connected') : 'connected';
-                            const isStarting = chStatus === 'starting';
-                            const bg = isStarting ? 'var(--bs-warning-bg-subtle,#fff3cd)' : 'var(--bs-success-bg-subtle,#d1e7dd)';
-                            const color = isStarting ? 'var(--bs-warning-text,#664d03)' : 'var(--bs-success-text,#0a3622)';
+                            const theme = this._gatewayStatusTheme(chStatus);
                             const sesCount = (typeof ch === 'object') ? (ch.session_count || 0) : 0;
                             return `
                         <div class="col-auto">
-                            <span class="badge" style="background:${bg};color:${color};font-size:0.82rem;padding:5px 10px;">
+                            <span class="badge" style="background:${theme.bg};color:${theme.color};font-size:0.82rem;padding:5px 10px;">
                                 <i class="feather-radio me-1"></i>${chName}
-                                <span class="ms-1 opacity-75">${isStarting ? '(starting)' : sesCount + ' sess.'}</span>
+                                <span class="ms-1 opacity-75">${theme.label === 'running' ? sesCount + ' sess.' : theme.label}</span>
                             </span>
                         </div>`;}).join('') || '<div class="text-muted small">No channels connected.</div>'}
                     </div>
@@ -1016,13 +1057,13 @@ Object.assign(SingleCellAnalysis.prototype, {
             const name = typeof ch === 'string' ? ch : (ch.name || ch.channel || JSON.stringify(ch));
             const status = typeof ch === 'object' ? (ch.status || 'connected') : 'connected';
             const sessions = typeof ch === 'object' ? (ch.session_count || 0) : 0;
-            const color = status === 'connected' ? 'success' : 'secondary';
+            const theme = this._gatewayStatusTheme(status);
             return `
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-2">
-                            <span class="badge bg-${color} me-2">${status}</span>
+                            <span class="badge me-2" style="background:${theme.bg};color:${theme.color};">${theme.label}</span>
                             <span class="fw-semibold text-capitalize">${name}</span>
                         </div>
                         <div class="text-muted small"><i class="feather-users me-1"></i>${sessions} sessions</div>
@@ -1292,8 +1333,13 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (el) el.innerHTML = `<div class="alert alert-warning"><i class="feather-alert-circle me-2"></i>Could not load config. Ensure the gateway backend is running.</div>`;
     },
 
+    _channelState(ch) {
+        return (this._gwProcesses || []).find(p => p.channel === ch) || null;
+    },
+
     _channelRunning(ch) {
-        return this._gwProcesses.some(p => p.channel === ch && p.running);
+        const state = this._channelState(ch);
+        return !!(state && state.status === 'running');
     },
 
     _renderChannelCards() {
@@ -1310,14 +1356,26 @@ Object.assign(SingleCellAnalysis.prototype, {
     },
 
     _channelCardHTML(ch) {
-        const running = this._channelRunning(ch.id);
+        const state = this._channelState(ch.id) || {};
+        const status = state.status || (state.configured ? 'stopped' : 'not_configured');
+        const running = status === 'running';
+        const failed = status === 'failed';
+        const starting = status === 'starting';
         const cfg = (this._gwConfig || {})[ch.id] || {};
         const statusBadge = running
             ? `<span class="badge bg-success">running</span>`
-            : `<span class="badge bg-secondary">stopped</span>`;
-        const startStopBtn = running
-            ? `<button class="btn btn-sm btn-danger" onclick="singleCellApp.stopChannel('${ch.id}')"><i class="feather-square me-1"></i>Stop</button>`
-            : `<button class="btn btn-sm btn-success" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>Start</button>`;
+            : failed
+                ? `<span class="badge bg-danger">failed</span>`
+                : starting
+                    ? `<span class="badge bg-warning text-dark">starting</span>`
+                    : state.configured
+                        ? `<span class="badge bg-secondary">stopped</span>`
+                        : `<span class="badge bg-dark">not configured</span>`;
+        const primaryBtn = running
+            ? `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>Running</button>`
+            : failed
+                ? `<button class="btn btn-sm btn-warning" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>Run</button>`
+                : `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${state.configured ? 'Stopped' : 'Not configured'}</button>`;
 
         return `
         <div class="card mb-3" id="gw-card-${ch.id}">
@@ -1332,7 +1390,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                     <button class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.testChannel('${ch.id}')">
                         <i class="feather-zap me-1"></i>Test
                     </button>
-                    ${startStopBtn}
+                    ${running ? `<button class="btn btn-sm btn-danger" onclick="singleCellApp.stopChannel('${ch.id}')"><i class="feather-square me-1"></i>Stop</button>` : primaryBtn}
                     <i class="feather-chevron-down" id="gw-chevron-${ch.id}"></i>
                 </div>
             </div>
@@ -1565,7 +1623,7 @@ Object.assign(SingleCellAnalysis.prototype, {
     },
 
     startChannel(ch) {
-        const btn = document.querySelector(`#gw-card-${ch} .btn-success`);
+        const btn = document.querySelector(`#gw-card-${ch} button[onclick*="startChannel"]`);
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="feather-loader me-1"></i>Starting…'; if (window.feather) feather.replace({ 'stroke-width': 2 }); }
         // Save current form values first, then start
         const chVals = this._getChannelFormValues(ch);
@@ -1579,23 +1637,57 @@ Object.assign(SingleCellAnalysis.prototype, {
         .then(() => fetch(`/api/gateway/channels/${ch}/start`, { method: 'POST' }))
         .then(r => r.json())
         .then(data => {
+            const prev = this._channelState(ch) || {};
             if (data.ok) {
                 this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
-                this._gwProcesses.push({ channel: ch, running: true, pid: data.pid });
+                this._gwProcesses.push({
+                    channel: ch,
+                    running: true,
+                    status: 'running',
+                    pid: data.pid,
+                    configured: prev.configured !== undefined ? prev.configured : true,
+                });
                 this._showChResult(ch, true, data.message || `Started (pid=${data.pid})`);
             } else {
+                this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
+                this._gwProcesses.push({
+                    channel: ch,
+                    running: false,
+                    status: 'failed',
+                    error: data.error || 'Start failed',
+                    configured: prev.configured !== undefined ? prev.configured : true,
+                });
                 this._showChResult(ch, false, data.error || 'Start failed');
             }
             this._renderChannelCards();
         })
-        .catch(e => { this._showChResult(ch, false, e.message); this._renderChannelCards(); });
+        .catch(e => {
+            const prev = this._channelState(ch) || {};
+            this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
+            this._gwProcesses.push({
+                channel: ch,
+                running: false,
+                status: 'failed',
+                error: e.message,
+                configured: prev.configured !== undefined ? prev.configured : true,
+            });
+            this._showChResult(ch, false, e.message);
+            this._renderChannelCards();
+        });
     },
 
     stopChannel(ch) {
         fetch(`/api/gateway/channels/${ch}/stop`, { method: 'POST' })
             .then(r => r.json())
             .then(data => {
+                const prev = this._channelState(ch) || {};
                 this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
+                this._gwProcesses.push({
+                    channel: ch,
+                    running: false,
+                    status: 'stopped',
+                    configured: prev.configured !== undefined ? prev.configured : true,
+                });
                 this._showChResult(ch, data.ok, data.message || data.error || '');
                 // Stop log polling
                 if (this._logPollers && this._logPollers[ch]) {
