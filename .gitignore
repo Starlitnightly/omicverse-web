@@ -21,3 +21,6 @@ yarn-error.log*
 /omicverse-notebook/dist/
 /omicverse-notebook/lib/
 /omicverse-notebook/omicverse_notebook/__pycache__/
+
+dist/
+omicverseweb.egg-info/
