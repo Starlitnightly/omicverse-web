@@ -870,6 +870,7 @@ class SingleCellAnalysis {
             ['方法', 'Method'],
             ['主成分数量', 'Number of PCs'],
             ['邻居数量', 'Number of neighbors'],
+            ['距离度量', 'Distance metric'],
             ['最小距离', 'Min distance'],
             ['困惑度', 'Perplexity'],
             ['分辨率', 'Resolution'],
@@ -3615,12 +3616,32 @@ class SingleCellAnalysis {
                     <input type="number" class="form-control" id="perplexity" value="30" min="5" max="100">
                 </div>
             `,
-            'neighbors': `
-                <div class="parameter-input">
-                    <label>邻居数量</label>
-                    <input type="number" class="form-control" id="n_neighbors" value="15" min="5" max="50">
-                </div>
-            `,
+            'neighbors': (() => {
+                const embeddingKeys = (this.currentData && this.currentData.embeddings) ? this.currentData.embeddings : [];
+                const embeddingOpts = ['<option value="">-- 自动检测 --</option>',
+                    '<option value="X_pca">X_pca</option>']
+                    .concat(embeddingKeys.filter(k => k !== 'pca').map(k => `<option value="X_${k}">X_${k}</option>`))
+                    .join('');
+                return `
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label">邻居数量 (n_neighbors)</label>
+                        <input type="number" class="form-control" id="n_neighbors" value="15" min="5" max="100">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">主成分数量 (n_pcs)</label>
+                        <input type="number" class="form-control" id="n_pcs" value="50" min="5" max="200">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">低维表示 (use_rep)</label>
+                        <select class="form-control" id="use_rep">${embeddingOpts}</select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">距离度量 (metric)</label>
+                        <input type="text" class="form-control" id="metric" value="euclidean">
+                    </div>
+                </div>`;
+            })(),
             'leiden': `
                 <div class="parameter-input">
                     <label>分辨率</label>

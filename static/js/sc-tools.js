@@ -712,12 +712,32 @@ Object.assign(SingleCellAnalysis.prototype, {
                     <input type="number" class="form-control" id="perplexity" value="30" min="5" max="100">
                 </div>
             `,
-            'neighbors': `
-                <div class="parameter-input">
-                    <label>邻居数量</label>
-                    <input type="number" class="form-control" id="n_neighbors" value="15" min="5" max="50">
-                </div>
-            `,
+            'neighbors': (() => {
+                const embeddingKeys = (this.currentData && this.currentData.embeddings) ? this.currentData.embeddings : [];
+                const embeddingOpts = ['<option value="">-- 自动检测 --</option>',
+                    '<option value="X_pca">X_pca</option>']
+                    .concat(embeddingKeys.filter(k => k !== 'pca').map(k => `<option value="X_${k}">X_${k}</option>`))
+                    .join('');
+                return `
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label">邻居数量 (n_neighbors)</label>
+                        <input type="number" class="form-control" id="n_neighbors" value="15" min="5" max="100">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">主成分数量 (n_pcs)</label>
+                        <input type="number" class="form-control" id="n_pcs" value="50" min="5" max="200">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">低维表示 (use_rep)</label>
+                        <select class="form-control" id="use_rep">${embeddingOpts}</select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">距离度量 (metric)</label>
+                        <input type="text" class="form-control" id="metric" value="euclidean">
+                    </div>
+                </div>`;
+            })(),
             'leiden': `
                 <div class="parameter-input">
                     <label>分辨率</label>
@@ -2240,13 +2260,18 @@ sc.pp.pca(adata, n_comps=${n})
 
             'neighbors': () => {
                 const nn = p.n_neighbors || 15;
+                const npcs = p.n_pcs || 50;
+                const rep = p.use_rep || '';
+                const metric = p.metric || 'euclidean';
+                const repLine = rep ? `    use_rep=${JSON.stringify(rep)},\n` : '';
                 return `import scanpy as sc
 
 # Build a KNN graph (required for UMAP / clustering)
 sc.pp.neighbors(
     adata,
     n_neighbors=${nn},  # number of neighbours
-    n_pcs=50            # number of PCA components to use
+${repLine}    n_pcs=${npcs},            # number of PCA components to use
+    metric=${JSON.stringify(metric)}
 )`;
             },
 
@@ -2674,6 +2699,8 @@ print(results)`;
             'neighbors': [
                 { name: 'n_neighbors', type: 'int', default: '15', desc: 'Number of neighbours per cell. Larger = smoother graph, coarser clusters; smaller = finer detail.' },
                 { name: 'n_pcs', type: 'int', default: '50', desc: 'Number of PCA components used to compute neighbours; should match the PCA step.' },
+                { name: 'use_rep', type: 'str', default: '"X_pca"', desc: 'obsm key for the low-dimensional representation; useful when building the graph from a non-PCA embedding.' },
+                { name: 'metric', type: 'str', default: '"euclidean"', desc: 'Distance metric used for neighbour search.' },
             ],
             'umap': [
                 { name: 'min_dist', type: 'float', default: '0.5', desc: 'Minimum distance between embedded points (0.0–1.0). Smaller = tighter clusters; larger = more uniform spread.' },

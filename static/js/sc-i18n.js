@@ -1557,6 +1557,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             ['方法', 'Method'],
             ['主成分数量', 'Number of PCs'],
             ['邻居数量', 'Number of neighbors'],
+            ['距离度量', 'Distance metric'],
             ['最小距离', 'Min distance'],
             ['困惑度', 'Perplexity'],
             ['分辨率', 'Resolution'],

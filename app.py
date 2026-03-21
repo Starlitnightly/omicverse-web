@@ -747,9 +747,24 @@ def run_tool(tool):
                       n_comps=min(n_comps, min(state.current_adata.shape) - 1))
 
         elif tool == 'neighbors':
-            sc.pp.neighbors(state.current_adata,
-                            n_neighbors=params.get('n_neighbors', 15),
-                            n_pcs=params.get('n_pcs', 50))
+            n_neighbors = int(params.get('n_neighbors', 15))
+            n_pcs = params.get('n_pcs', 50)
+            use_rep = params.get('use_rep') or None
+            metric = params.get('metric', 'euclidean') or 'euclidean'
+
+            neighbors_kwargs = dict(
+                n_neighbors=n_neighbors,
+                metric=metric,
+            )
+            if n_pcs not in (None, '', 'None'):
+                neighbors_kwargs['n_pcs'] = int(n_pcs)
+            if use_rep:
+                if use_rep in state.current_adata.obsm:
+                    neighbors_kwargs['use_rep'] = use_rep
+                elif 'X_pca' in state.current_adata.obsm:
+                    neighbors_kwargs['use_rep'] = 'X_pca'
+
+            sc.pp.neighbors(state.current_adata, **neighbors_kwargs)
 
         elif tool == 'umap':
             if 'neighbors' not in state.current_adata.uns:
