@@ -329,7 +329,12 @@ html.app-skin-dark .file-upload-area:hover {
 }
 
 #account-menu-dropdown .dropdown-menu {
-  min-width: 280px;
+  width: min(320px, calc(100vw - 1.25rem));
+  min-width: 300px;
+  padding: 0.95rem 0.9rem 0.8rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 1.15rem;
+  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.16);
 }
 
 #account-menu-dropdown.show .nxl-head-link {
@@ -339,14 +344,16 @@ html.app-skin-dark .file-upload-area:hover {
 
 .nxl-user-menu .user-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.85rem;
-  padding: 0.35rem 0 0.9rem;
+  padding: 0.1rem 0 0.95rem;
+  margin-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
 }
 
 .user-head-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -360,23 +367,57 @@ html.app-skin-dark .file-upload-area:hover {
 
 .user-head-copy {
   min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .user-head-copy h6 {
   line-height: 1.2;
+  word-break: break-word;
 }
 
 .user-head-copy #account-menu-subtitle {
+  margin-top: 0.2rem !important;
   line-height: 1.35;
   word-break: break-word;
+}
+
+.nxl-user-menu .user-body {
+  display: grid;
+  gap: 0.2rem;
 }
 
 .nxl-user-menu .user-body .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+  gap: 0.75rem;
+  padding: 0.72rem 0.8rem;
+  border-radius: 0.9rem;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.nxl-user-menu .user-body .dropdown-item:hover,
+.nxl-user-menu .user-body .dropdown-item:focus {
+  background: rgba(11, 122, 39, 0.08);
+}
+
+.nxl-user-menu .user-body .dropdown-item i {
+  flex: 0 0 1.1rem;
+  width: 1.1rem;
+  margin-right: 0 !important;
+  text-align: center;
+  color: #64748b;
+}
+
+.nxl-user-menu .user-body .dropdown-item span {
+  min-width: 0;
+  flex: 1;
+}
+
+.nxl-user-menu .dropdown-divider {
+  margin: 0.45rem 0;
+  border-color: rgba(148, 163, 184, 0.18);
 }
 
 .account-view-shell {
@@ -541,9 +582,9 @@ html.app-skin-dark .file-upload-area:hover {
   margin-bottom: 1rem;
   padding: 0.9rem 1rem;
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(14px);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .account-auth-logo-wrap img {
@@ -1001,6 +1042,29 @@ html.app-skin-dark #account-menu-dropdown.show .nxl-head-link {
   background: rgba(34, 197, 94, 0.12);
 }
 
+html.app-skin-dark #account-menu-dropdown .dropdown-menu {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
+  box-shadow: 0 24px 56px rgba(2, 6, 23, 0.5);
+}
+
+html.app-skin-dark .nxl-user-menu .user-head {
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+html.app-skin-dark .nxl-user-menu .user-body .dropdown-item:hover,
+html.app-skin-dark .nxl-user-menu .user-body .dropdown-item:focus {
+  background: rgba(34, 197, 94, 0.12) !important;
+}
+
+html.app-skin-dark .nxl-user-menu .user-body .dropdown-item i {
+  color: #94a3b8;
+}
+
+html.app-skin-dark .nxl-user-menu .dropdown-divider {
+  border-color: rgba(148, 163, 184, 0.14);
+}
+
 html.app-skin-dark .account-hero {
   border-color: rgba(34, 197, 94, 0.18);
   background:
@@ -1027,6 +1091,90 @@ html.app-skin-dark .account-panel {
   border-color: rgba(148, 163, 184, 0.14);
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
   box-shadow: 0 16px 34px rgba(2, 6, 23, 0.35);
+}
+
+html.app-skin-dark .account-auth-dialog .modal-content {
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 32px 80px rgba(2, 6, 23, 0.58);
+}
+
+html.app-skin-dark .account-auth-shell {
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.98), rgba(15, 23, 42, 0.98));
+}
+
+html.app-skin-dark .account-auth-panel {
+  background:
+    radial-gradient(circle at top right, rgba(34, 197, 94, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(17, 24, 39, 0.98));
+}
+
+html.app-skin-dark .account-auth-header {
+  background: transparent;
+}
+
+html.app-skin-dark .account-auth-panel .modal-title,
+html.app-skin-dark .account-auth-section-copy h6 {
+  color: #f8fafc;
+}
+
+html.app-skin-dark .account-auth-panel-subtitle,
+html.app-skin-dark .account-auth-section-copy p,
+html.app-skin-dark .account-form-note {
+  color: #94a3b8;
+}
+
+html.app-skin-dark .account-auth-tabs .nav-link {
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.55);
+  color: #cbd5e1;
+}
+
+html.app-skin-dark .account-auth-tabs .nav-link:hover {
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #f8fafc;
+}
+
+html.app-skin-dark .account-auth-tabs .nav-link.active {
+  box-shadow: 0 14px 28px rgba(11, 122, 39, 0.24);
+}
+
+html.app-skin-dark #accountAuthModal .form-label {
+  color: #e2e8f0;
+}
+
+html.app-skin-dark #accountAuthModal .form-control {
+  background: rgba(15, 23, 42, 0.86) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  color: #f8fafc !important;
+}
+
+html.app-skin-dark #accountAuthModal .form-control::placeholder {
+  color: #64748b;
+}
+
+html.app-skin-dark #accountAuthModal .form-control:focus {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(34, 197, 94, 0.42) !important;
+  box-shadow: 0 0 0 0.2rem rgba(11, 122, 39, 0.22) !important;
+}
+
+html.app-skin-dark #accountAuthModal .btn-outline-secondary {
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+}
+
+html.app-skin-dark #accountAuthModal .btn-outline-secondary:hover {
+  color: #f8fafc !important;
+  border-color: rgba(34, 197, 94, 0.32) !important;
+  background: rgba(30, 41, 59, 0.88) !important;
+}
+
+html.app-skin-dark #accountAuthModal .alert-warning,
+html.app-skin-dark #accountAuthModal .alert-danger,
+html.app-skin-dark #accountAuthModal .alert-success {
+  border-color: rgba(148, 163, 184, 0.14);
 }
 
 html.app-skin-dark .skills-subtitle,

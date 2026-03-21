@@ -765,6 +765,16 @@ Object.assign(SingleCellAnalysis.prototype, {
     },
 
     switchView(view) {
+        if (view === 'gateway' && typeof this.canAccessGateway === 'function' && !this.canAccessGateway()) {
+            if (typeof this.updateGatewayAccess === 'function') {
+                this.updateGatewayAccess({ redirectIfBlocked: false });
+            }
+            if (typeof this.openAuthModal === 'function') {
+                this.openAuthModal('login');
+            }
+            return;
+        }
+
         this.currentView = view;
         this.persistView(view); // persist across refreshes
 
@@ -1364,6 +1374,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const running = status === 'running';
         const failed = status === 'failed';
         const starting = status === 'starting';
+        const canStart = !!state.can_start || (state.configured && !running && !starting && status !== 'not_configured');
         const cfg = (this._gwConfig || {})[ch.id] || {};
         const statusBadge = running
             ? `<span class="badge bg-success">${this.t('gateway.status.running')}</span>`
@@ -1376,8 +1387,8 @@ Object.assign(SingleCellAnalysis.prototype, {
                         : `<span class="badge bg-dark">${this.t('gateway.status.notConfigured')}</span>`;
         const primaryBtn = running
             ? `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${this.t('gateway.button.running')}</button>`
-            : failed
-                ? `<button class="btn btn-sm btn-warning" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>${this.t('common.run')}</button>`
+            : canStart
+                ? `<button class="btn btn-sm ${failed ? 'btn-warning' : 'btn-primary'}" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>${this.t('common.run')}</button>`
                 : `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${state.configured ? this.t('gateway.button.stopped') : this.t('gateway.button.notConfigured')}</button>`;
 
         return `
@@ -1722,6 +1733,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                     running: true,
                     status: 'running',
                     pid: data.pid,
+                    can_start: false,
                     configured: prev.configured !== undefined ? prev.configured : true,
                 });
                 this._showChResult(ch, true, data.message || `${this.t('gateway.started')} (pid=${data.pid})`);
@@ -1732,6 +1744,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                     running: false,
                     status: 'failed',
                     error: data.error || this.t('gateway.startFailed'),
+                    can_start: true,
                     configured: prev.configured !== undefined ? prev.configured : true,
                 });
                 this._showChResult(ch, false, data.error || this.t('gateway.startFailed'));
@@ -1746,6 +1759,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 running: false,
                 status: 'failed',
                 error: e.message,
+                can_start: true,
                 configured: prev.configured !== undefined ? prev.configured : true,
             });
             this._showChResult(ch, false, e.message);
@@ -1763,6 +1777,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                     channel: ch,
                     running: false,
                     status: 'stopped',
+                    can_start: prev.configured !== undefined ? prev.configured : true,
                     configured: prev.configured !== undefined ? prev.configured : true,
                 });
                 this._showChResult(ch, data.ok, data.message || data.error || '');

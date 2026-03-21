@@ -3358,9 +3358,10 @@ def runtime_config():
 
 
 @app.route('/')
+@app.route('/index.html')
 def index():
-    """Serve the OmicVerse homepage."""
-    return send_from_directory(app.root_path, 'index.html')
+    """Serve the main OmicVerse application."""
+    return send_from_directory(app.root_path, 'single_cell_analysis_standalone.html')
 
 
 @app.route('/analysis')
@@ -3382,7 +3383,7 @@ def legacy_index():
     if os.path.exists(ui_index):
         return send_from_directory(ui_dist, 'index.html')
 
-    return send_from_directory(app.root_path, 'index.html')
+    return send_from_directory(app.root_path, 'single_cell_analysis_standalone.html')
 
 
 @app.route('/<path:path>')
@@ -3410,7 +3411,7 @@ def static_proxy(path):
         return send_from_directory(cra_build, 'index.html')
     if os.path.exists(os.path.join(ui_dist, 'index.html')):
         return send_from_directory(ui_dist, 'index.html')
-    return send_from_directory(app.root_path, 'index.html')
+    return send_from_directory(app.root_path, 'single_cell_analysis_standalone.html')
 
 
 # ============================================================================

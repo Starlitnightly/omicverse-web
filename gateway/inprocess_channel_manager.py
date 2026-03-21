@@ -76,7 +76,7 @@ class InProcessChannelManager:
                         "running": False,
                     }
                 state["configured"] = configured
-                state["can_start"] = configured and state.get("status") != "running"
+                state["can_start"] = configured and state.get("status") not in {"running", "starting", "not_configured"}
                 state["mode"] = "thread"
                 snapshot.append(state)
         return snapshot

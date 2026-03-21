@@ -15,6 +15,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.bindAccountCenterEvents();
         this.applyRuntimeBranding();
         this.updateAccountMenu();
+        this.updateGatewayAccess({ redirectIfBlocked: false });
         this.refreshAccountProfile();
         this.loadRuntimeConfig();
     },
@@ -24,6 +25,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const dropdown = byId('account-menu-dropdown');
         const toggle = byId('account-menu-toggle');
         const panel = byId('account-menu-panel');
+        const authModal = byId('accountAuthModal');
 
         if (toggle) {
             toggle.addEventListener('click', (event) => {
@@ -94,6 +96,13 @@ Object.assign(SingleCellAnalysis.prototype, {
         const accountCenterForm = byId('account-center-form');
         if (accountCenterForm) {
             accountCenterForm.addEventListener('submit', (event) => this.submitAccountCenterUpdate(event));
+        }
+
+        if (authModal) {
+            authModal.addEventListener('hidden.bs.modal', () => {
+                this._authReturnView = null;
+                this.updateGatewayAccess();
+            });
         }
     },
 
@@ -313,6 +322,26 @@ Object.assign(SingleCellAnalysis.prototype, {
         return headers;
     },
 
+    canAccessGateway() {
+        return !!(this.accountUser || this.getAccountToken());
+    },
+
+    updateGatewayAccess({ redirectIfBlocked = true } = {}) {
+        const gatewayBtn = document.getElementById('view-gateway-btn');
+        const gatewayNav = document.getElementById('gateway-nav');
+        const allowed = this.canAccessGateway();
+
+        if (gatewayBtn) {
+            gatewayBtn.style.display = allowed ? '' : 'none';
+        }
+        if (!allowed && gatewayNav) {
+            gatewayNav.style.display = 'none';
+        }
+        if (!allowed && redirectIfBlocked && this.currentView === 'gateway' && this.switchView) {
+            this.switchView('visualization');
+        }
+    },
+
     updateAccountMenu() {
         const title = document.getElementById('account-menu-title');
         const subtitle = document.getElementById('account-menu-subtitle');
@@ -344,6 +373,8 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (!element) return;
             element.style.display = isAuthenticated ? 'none' : '';
         });
+
+        this.updateGatewayAccess();
     },
 
     showAccountMessage(id, message = '', tone = 'danger') {

@@ -470,7 +470,7 @@ def list_channel_states() -> list[dict]:
                 state.setdefault("status", "stopped" if configured else "not_configured")
                 state["running"] = state.get("status") == "running"
             state["configured"] = configured
-            state["can_start"] = state.get("status") == "failed"
+            state["can_start"] = configured and state.get("status") not in {"running", "starting", "not_configured"}
             snapshot.append(state)
         return snapshot
 

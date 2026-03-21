@@ -50,6 +50,12 @@ Object.assign(SingleCellAnalysis.prototype, {
                             <option value="markdown" data-i18n="cell.typeMarkdown">Markdown</option>
                             <option value="raw" data-i18n="cell.typeRaw">Raw</option>
                         </select>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.moveCodeCell('${cellId}', 'up')" title="Move up" data-i18n-title="cell.moveUp">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.moveCodeCell('${cellId}', 'down')" title="Move down" data-i18n-title="cell.moveDown">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
                         <button type="button" class="btn btn-sm btn-success" onclick="singleCellApp.runCodeCell('${cellId}')" title="运行 (Shift+Enter)" data-i18n-title="cell.run">
                             <i class="feather-play"></i>
                         </button>
@@ -297,6 +303,44 @@ Object.assign(SingleCellAnalysis.prototype, {
             cellNumber.textContent = `In [${cellCounter}]:`;
         } else if (status === 'idle') {
             cellNumber.textContent = 'In [ ]:';
+        }
+    },
+
+    moveCodeCell(cellId, direction) {
+        const cell = document.getElementById(cellId);
+        const container = document.getElementById('code-cells-container');
+        if (!cell || !container) return;
+
+        const currentIndex = this.codeCells.indexOf(cellId);
+        if (currentIndex === -1) return;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= this.codeCells.length) return;
+
+        const targetCellId = this.codeCells[targetIndex];
+        const targetCell = document.getElementById(targetCellId);
+        if (!targetCell) return;
+
+        const textarea = cell.querySelector('.code-input');
+        const selectionStart = textarea ? textarea.selectionStart : null;
+        const selectionEnd = textarea ? textarea.selectionEnd : null;
+
+        this._pushNotebookUndoSnapshot();
+        if (direction === 'up') {
+            container.insertBefore(cell, targetCell);
+        } else {
+            container.insertBefore(targetCell, cell);
+        }
+
+        this.codeCells.splice(currentIndex, 1);
+        this.codeCells.splice(targetIndex, 0, cellId);
+
+        this.lastFocusedCellId = cellId;
+        if (textarea) {
+            textarea.focus();
+            if (Number.isInteger(selectionStart) && Number.isInteger(selectionEnd)) {
+                textarea.setSelectionRange(selectionStart, selectionEnd);
+            }
         }
     },
 

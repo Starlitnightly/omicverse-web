@@ -67,6 +67,7 @@
         'saveData','resetData',
         // sc-notebook
         'addCodeCell','updateCellNumber',
+        'moveCodeCell',
         'runCodeCell','runCodeCellPromise','runCurrentCell','runAllCells',
         'toggleCellOutput','toggleCellOutputFull','clearCellOutput',
         'importNotebookFile','loadNotebookCells','renderNotebookOutputs',
