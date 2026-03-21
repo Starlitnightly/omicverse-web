@@ -66,6 +66,8 @@ app.config['UPLOAD_FOLDER'] = tempfile.mkdtemp()
 
 # Remote mode detection (Phase 4)
 OV_WEB_REMOTE_MODE = os.environ.get('OV_WEB_REMOTE_MODE', '0') == '1'
+OV_WEB_FORCE_LOGIN = os.environ.get('OV_WEB_FORCE_LOGIN', '0') == '1'
+OV_WEB_LAUNCHER = str(os.environ.get('OV_LAUNCHER') or 'omicverse')
 
 # Global state container (for easier blueprint access)
 class AppState:
@@ -2988,6 +2990,8 @@ def app_config():
     """
     return jsonify({
         'remote_mode': OV_WEB_REMOTE_MODE,
+        'force_login': OV_WEB_FORCE_LOGIN,
+        'launcher': OV_WEB_LAUNCHER,
     })
 
 

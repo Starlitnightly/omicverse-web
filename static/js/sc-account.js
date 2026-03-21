@@ -10,9 +10,14 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.accountConfigured = true;
         this.accountUser = this.readCachedAccountProfile();
         this.accountMenuOpen = false;
+        this.accountForceLogin = false;
+        this.accountLauncher = 'omicverse';
+        this.accountAuthModalOpen = false;
         this.bindAccountCenterEvents();
         this.updateAccountMenu();
-        this.refreshAccountProfile();
+        this.loadAccountConfig()
+            .catch(() => {})
+            .finally(() => this.refreshAccountProfile());
     },
 
     bindAccountCenterEvents() {
@@ -81,9 +86,62 @@ Object.assign(SingleCellAnalysis.prototype, {
             profileForm.addEventListener('submit', (event) => this.submitProfileUpdate(event));
         }
 
+        const authModal = byId('accountAuthModal');
+        if (authModal) {
+            authModal.addEventListener('hide.bs.modal', (event) => {
+                if (this.accountForceLogin && !this.accountUser) {
+                    event.preventDefault();
+                }
+            });
+            authModal.addEventListener('shown.bs.modal', () => {
+                this.accountAuthModalOpen = true;
+            });
+            authModal.addEventListener('hidden.bs.modal', () => {
+                this.accountAuthModalOpen = false;
+            });
+        }
+
         const accountCenterForm = byId('account-center-form');
         if (accountCenterForm) {
             accountCenterForm.addEventListener('submit', (event) => this.submitAccountCenterUpdate(event));
+        }
+    },
+
+    async loadAccountConfig() {
+        try {
+            const response = await fetch('/api/config');
+            const data = await response.json();
+            this.accountForceLogin = !!data.force_login;
+            this.accountLauncher = data.launcher || 'omicverse';
+        } catch (_) {
+            this.accountForceLogin = false;
+            this.accountLauncher = 'omicverse';
+        }
+        this._syncForcedLoginState();
+    },
+
+    _syncForcedLoginState() {
+        const forceLock = !!(this.accountForceLogin && !this.accountUser);
+        const modalEl = document.getElementById('accountAuthModal');
+        const closeBtn = modalEl ? modalEl.querySelector('.btn-close') : null;
+        if (closeBtn) {
+            closeBtn.style.display = forceLock ? 'none' : '';
+        }
+        document.body.classList.toggle('ov-force-login', forceLock);
+        if (!modalEl || !window.bootstrap) {
+            return;
+        }
+        if (!forceLock) {
+            if (modalEl.classList.contains('show')) {
+                const existing = bootstrap.Modal.getInstance(modalEl);
+                if (existing) {
+                    existing.hide();
+                }
+            }
+            return;
+        }
+        if (!modalEl.classList.contains('show')) {
+            this.openAuthModal('login');
         }
     },
 
@@ -264,10 +322,11 @@ Object.assign(SingleCellAnalysis.prototype, {
     openAuthModal(mode = 'login') {
         this.closeAccountMenu();
         this.hideResendButton();
+        const forceLock = !!(this.accountForceLogin && !this.accountUser);
         this.showAccountMessage(
             'account-auth-message',
-            this.accountConfigured ? '' : this.t('account.serverOffline'),
-            this.accountConfigured ? 'danger' : 'warning'
+            !this.accountConfigured ? this.t('account.serverOffline') : (forceLock ? this.t('account.authRequired') : ''),
+            !this.accountConfigured || forceLock ? 'warning' : 'danger'
         );
         const targetId = mode === 'register' ? 'account-register-tab' : 'account-login-tab';
         const target = document.getElementById(targetId);
@@ -276,7 +335,19 @@ Object.assign(SingleCellAnalysis.prototype, {
         }
         const modalEl = document.getElementById('accountAuthModal');
         if (modalEl && window.bootstrap) {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            const closeBtn = modalEl.querySelector('.btn-close');
+            if (closeBtn) {
+                closeBtn.style.display = forceLock ? 'none' : '';
+            }
+            const existing = bootstrap.Modal.getInstance(modalEl);
+            if (existing) {
+                existing.dispose();
+            }
+            const modal = new bootstrap.Modal(modalEl, {
+                backdrop: forceLock ? 'static' : true,
+                keyboard: !forceLock,
+            });
+            modal.show();
         } else if (!this.accountConfigured) {
             alert(this.t('account.serverOffline'));
         }
@@ -420,6 +491,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountConfigured = false;
         }
         this.updateAccountMenu();
+        this._syncForcedLoginState();
         if (this.currentView === 'account') {
             this.renderAccountCenter();
         }
@@ -455,6 +527,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountUser = data.user || null;
             this.cacheAccountProfile(this.accountUser);
             this.updateAccountMenu();
+            this._syncForcedLoginState();
             const modalEl = document.getElementById('accountAuthModal');
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -499,6 +572,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountUser = data.user || null;
             this.cacheAccountProfile(this.accountUser);
             this.updateAccountMenu();
+            this._syncForcedLoginState();
             const modalEl = document.getElementById('accountAuthModal');
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -577,6 +651,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.accountCenterEditable = false;
         this.skillsLoaded = false;
         this.updateAccountMenu();
+        this._syncForcedLoginState();
         if (this.currentView === 'account' && this.switchView) {
             this.switchView('visualization');
         }

@@ -894,8 +894,8 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (gatewayView) gatewayView.style.display = 'block';
             if (gatewayBtn)  { gatewayBtn.classList.remove('btn-outline-primary'); gatewayBtn.classList.add('btn-primary'); }
             if (gatewayNav)  gatewayNav.style.display = 'block';
-            if (pageTitle) pageTitle.innerHTML = `<i class="feather-share-2 me-2"></i>Gateway`;
-            if (breadcrumbTitle) breadcrumbTitle.textContent = 'Gateway';
+            if (pageTitle) pageTitle.innerHTML = `<i class="feather-share-2 me-2"></i>${this.t('view.gatewayTitle')}`;
+            if (breadcrumbTitle) breadcrumbTitle.textContent = this.t('breadcrumb.gateway');
             // Load data if first visit or if refresh requested
             if (!this._gatewayLoaded) {
                 this._gatewayActiveTab = 'overview';
@@ -910,6 +910,7 @@ Object.assign(SingleCellAnalysis.prototype, {
     _gatewayActiveTab: 'overview',
     _gatewayAutoRefreshTimer: null,
     _gatewayFolders: [],
+    _gwChannelUIState: {},
 
     showGatewayTab(tab) {
         this._gatewayActiveTab = tab;
@@ -984,18 +985,18 @@ Object.assign(SingleCellAnalysis.prototype, {
     _gatewayStatusTheme(status) {
         const s = status || 'stopped';
         if (s === 'running') {
-            return { bg: 'var(--bs-success-bg-subtle,#d1e7dd)', color: 'var(--bs-success-text,#0a3622)', label: 'running' };
+            return { bg: 'var(--bs-success-bg-subtle,#d1e7dd)', color: 'var(--bs-success-text,#0a3622)', label: this.t('gateway.status.running') };
         }
         if (s === 'starting') {
-            return { bg: 'var(--bs-warning-bg-subtle,#fff3cd)', color: 'var(--bs-warning-text,#664d03)', label: 'starting' };
+            return { bg: 'var(--bs-warning-bg-subtle,#fff3cd)', color: 'var(--bs-warning-text,#664d03)', label: this.t('gateway.status.starting') };
         }
         if (s === 'failed') {
-            return { bg: 'var(--bs-danger-bg-subtle,#f8d7da)', color: 'var(--bs-danger-text,#842029)', label: 'failed' };
+            return { bg: 'var(--bs-danger-bg-subtle,#f8d7da)', color: 'var(--bs-danger-text,#842029)', label: this.t('gateway.status.failed') };
         }
         if (s === 'not_configured') {
-            return { bg: 'var(--bs-dark-bg-subtle,#ced4da)', color: 'var(--bs-dark-text,#212529)', label: 'not configured' };
+            return { bg: 'var(--bs-dark-bg-subtle,#ced4da)', color: 'var(--bs-dark-text,#212529)', label: this.t('gateway.status.notConfigured') };
         }
-        return { bg: 'var(--bs-secondary-bg-subtle,#e9ecef)', color: 'var(--bs-secondary-text,#495057)', label: s };
+        return { bg: 'var(--bs-secondary-bg-subtle,#e9ecef)', color: 'var(--bs-secondary-text,#495057)', label: s === 'stopped' ? this.t('gateway.status.stopped') : s };
     },
 
     _renderGatewayOverview(status, sessions, memStats) {
@@ -1018,7 +1019,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const detail = el('gw-status-detail');
         if (detail) {
             if (!status) {
-                detail.innerHTML = `<span class="text-warning"><i class="feather-alert-circle me-1"></i>Gateway API not available — running in web-only mode.</span>`;
+                detail.innerHTML = `<span class="text-warning"><i class="feather-alert-circle me-1"></i>${this.t('gateway.webOnlyMode')}</span>`;
             } else {
                 detail.innerHTML = `
                     <div class="row g-2">
@@ -1031,11 +1032,11 @@ Object.assign(SingleCellAnalysis.prototype, {
                         <div class="col-auto">
                             <span class="badge" style="background:${theme.bg};color:${theme.color};font-size:0.82rem;padding:5px 10px;">
                                 <i class="feather-radio me-1"></i>${chName}
-                                <span class="ms-1 opacity-75">${theme.label === 'running' ? sesCount + ' sess.' : theme.label}</span>
+                                <span class="ms-1 opacity-75">${chStatus === 'running' ? sesCount + ' ' + this.t('gateway.sessionsShort') : theme.label}</span>
                             </span>
-                        </div>`;}).join('') || '<div class="text-muted small">No channels connected.</div>'}
+                        </div>`;}).join('') || `<div class="text-muted small">${this.t('gateway.noChannelsConnected')}</div>`}
                     </div>
-                    ${status.version ? `<div class="mt-2 text-muted small">Gateway v${status.version}</div>` : ''}
+                    ${status.version ? `<div class="mt-2 text-muted small">${this.t('view.gatewayTitle')} v${status.version}</div>` : ''}
                 `;
             }
         }
@@ -1049,7 +1050,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             el.innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <i class="feather-radio" style="font-size:2.5rem;opacity:.35;display:block;margin-bottom:12px;"></i>
-                    <p>No channels connected.<br><small>Start <code>omicverse claw --channel telegram --with-web</code> to connect a channel.</small></p>
+                    <p>${this.t('gateway.noChannelsConnected')}<br><small>${this.t('gateway.noChannelsHint')}</small></p>
                 </div>`;
             return;
         }
@@ -1066,7 +1067,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                             <span class="badge me-2" style="background:${theme.bg};color:${theme.color};">${theme.label}</span>
                             <span class="fw-semibold text-capitalize">${name}</span>
                         </div>
-                        <div class="text-muted small"><i class="feather-users me-1"></i>${sessions} sessions</div>
+                        <div class="text-muted small"><i class="feather-users me-1"></i>${sessions} ${this.t('gateway.sessionsLower')}</div>
                     </div>
                 </div>
             </div>`;
@@ -1078,14 +1079,14 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (!el) return;
         const sessions = (sessionsData && sessionsData.sessions) ? sessionsData.sessions : [];
         if (!sessions.length) {
-            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-users" style="font-size:2.5rem;opacity:.35;display:block;margin-bottom:12px;"></i><p>No active sessions.</p></div>`;
+            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-users" style="font-size:2.5rem;opacity:.35;display:block;margin-bottom:12px;"></i><p>${this.t('gateway.noActiveSessions')}</p></div>`;
             return;
         }
         el.innerHTML = `
         <div class="table-responsive">
         <table class="table table-hover table-sm align-middle">
             <thead class="table-light"><tr>
-                <th>Session ID</th><th>Channel</th><th>Messages</th><th>Last Active</th><th></th>
+                <th>${this.t('gateway.sessionId')}</th><th>${this.t('gateway.channel')}</th><th>${this.t('gateway.messages')}</th><th>${this.t('gateway.lastActive')}</th><th></th>
             </tr></thead>
             <tbody>
             ${sessions.map(s => `
@@ -1107,7 +1108,7 @@ Object.assign(SingleCellAnalysis.prototype, {
     },
 
     deleteGatewaySession(sid) {
-        if (!confirm(`Delete session ${sid}?`)) return;
+        if (!confirm(`${this.t('gateway.deleteSessionConfirm')} ${sid}?`)) return;
         fetch(`/api/gateway/sessions/${sid}`, { method: 'DELETE' })
             .then(() => this._loadGatewayStatus())
             .catch(e => console.error(e));
@@ -1143,7 +1144,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const allActive = !this._gatewayActiveFolderId;
         let html = `<a href="javascript:void(0)" class="d-block py-1 px-2 rounded small ${allActive ? 'fw-semibold text-primary' : 'text-muted'}"
                 onclick="singleCellApp._loadMemoryData(null)">
-                <i class="feather-inbox me-1"></i>All Documents</a>`;
+                <i class="feather-inbox me-1"></i>${this.t('gateway.allDocuments')}</a>`;
         folders.forEach(f => {
             const active = this._gatewayActiveFolderId === f.id;
             html += `
@@ -1162,7 +1163,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const el = document.getElementById('gw-memory-docs');
         if (!el) return;
         if (!docs.length) {
-            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-file-text" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px;"></i><p>No documents yet.</p></div>`;
+            el.innerHTML = `<div class="text-muted text-center py-5"><i class="feather-file-text" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px;"></i><p>${this.t('gateway.noDocumentsYet')}</p></div>`;
             return;
         }
         el.innerHTML = docs.map(doc => `
@@ -1210,14 +1211,14 @@ Object.assign(SingleCellAnalysis.prototype, {
                 (this._gatewayFolders || []).map(f => `<option value="${f.id}">${this._esc(f.name)}</option>`).join('');
         }
         if (doc) {
-            document.getElementById('gw-doc-modal-title').textContent = 'Edit Document';
+            document.getElementById('gw-doc-modal-title').textContent = this.t('gateway.editDocument');
             document.getElementById('gw-doc-edit-id').value = doc.id;
             document.getElementById('gw-doc-title').value = doc.title || '';
             document.getElementById('gw-doc-folder').value = doc.folder_id || '';
             document.getElementById('gw-doc-tags').value = (doc.tags || []).join(', ');
             document.getElementById('gw-doc-content').value = doc.content || '';
         } else {
-            document.getElementById('gw-doc-modal-title').textContent = 'New Memory Document';
+            document.getElementById('gw-doc-modal-title').textContent = this.t('gateway.newMemoryDocument');
             document.getElementById('gw-doc-edit-id').value = '';
             document.getElementById('gw-doc-title').value = '';
             document.getElementById('gw-doc-folder').value = this._gatewayActiveFolderId || '';
@@ -1240,7 +1241,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             tags: document.getElementById('gw-doc-tags').value.split(',').map(t => t.trim()).filter(Boolean),
             content: document.getElementById('gw-doc-content').value,
         };
-        if (!body.title) { alert('Title is required'); return; }
+        if (!body.title) { alert(this.t('gateway.titleRequired')); return; }
         const method = id ? 'PUT' : 'POST';
         const url = id ? `/api/gateway/memory/documents/${id}` : '/api/gateway/memory/documents';
         fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) })
@@ -1250,7 +1251,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 this._gatewayMemoryLoaded = false;
                 this._loadMemoryData(this._gatewayActiveFolderId);
             })
-            .catch(e => alert(`Save failed: ${e.message}`));
+            .catch(e => alert(`${this.t('gateway.saveFailed')}: ${e.message}`));
     },
 
     editMemoryDoc(id) {
@@ -1261,10 +1262,10 @@ Object.assign(SingleCellAnalysis.prototype, {
     },
 
     deleteMemoryDoc(id) {
-        if (!confirm('Delete this document?')) return;
+        if (!confirm(this.t('gateway.deleteDocumentConfirm'))) return;
         fetch(`/api/gateway/memory/documents/${id}`, { method: 'DELETE' })
             .then(() => { this._gatewayMemoryLoaded = false; this._loadMemoryData(this._gatewayActiveFolderId); })
-            .catch(e => alert(`Delete failed: ${e.message}`));
+            .catch(e => alert(`${this.t('gateway.deleteFailed')}: ${e.message}`));
     },
 
     showFolderModal() {
@@ -1274,7 +1275,7 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     saveFolder() {
         const name = document.getElementById('gw-folder-name').value.trim();
-        if (!name) { alert('Name required'); return; }
+        if (!name) { alert(this.t('gateway.nameRequired')); return; }
         fetch('/api/gateway/memory/folders', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -1286,7 +1287,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             this._gatewayMemoryLoaded = false;
             this._loadMemoryData(null);
         })
-        .catch(e => alert(`Failed: ${e.message}`));
+        .catch(e => alert(`${this.t('common.failed')}: ${e.message}`));
     },
 
     _esc(str) {
@@ -1316,7 +1317,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 if (m) m.value = this._gwConfig.model || '';
                 if (e) e.value = this._gwConfig.endpoint || '';
                 if (badge) {
-                    badge.textContent = data.api_key_set ? ('set: ' + (data.api_key_masked || '****')) : 'not set';
+                    badge.textContent = data.api_key_set ? (this.t('gateway.apiKeySetPrefix') + (data.api_key_masked || '****')) : this.t('gateway.secret.notSet');
                     badge.className = 'badge ms-1 ' + (data.api_key_set ? 'bg-success' : 'bg-secondary');
                     badge.style.fontSize = '0.68rem';
                 }
@@ -1330,7 +1331,7 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     _renderChannelConfigError() {
         const el = document.getElementById('gw-channel-cards');
-        if (el) el.innerHTML = `<div class="alert alert-warning"><i class="feather-alert-circle me-2"></i>Could not load config. Ensure the gateway backend is running.</div>`;
+        if (el) el.innerHTML = `<div class="alert alert-warning"><i class="feather-alert-circle me-2"></i>${this.t('gateway.loadingConfigError')}</div>`;
     },
 
     _channelState(ch) {
@@ -1344,14 +1345,16 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     _renderChannelCards() {
         const channels = [
-            { id: 'telegram',  label: 'Telegram',  icon: 'feather-send',      color: '#2AABEE' },
-            { id: 'feishu',    label: 'Feishu / Lark', icon: 'feather-feather', color: '#3370FF' },
-            { id: 'qq',        label: 'QQ Bot',    icon: 'feather-message-square', color: '#1AABE6' },
-            { id: 'imessage',  label: 'iMessage',  icon: 'feather-message-circle', color: '#34C759' },
+            { id: 'telegram',  label: this.t('gateway.channel.telegram'),  icon: 'feather-send',      color: '#2AABEE' },
+            { id: 'feishu',    label: this.t('gateway.channel.feishu'), icon: 'feather-feather', color: '#3370FF' },
+            { id: 'qq',        label: this.t('gateway.channel.qq'),    icon: 'feather-message-square', color: '#1AABE6' },
+            { id: 'imessage',  label: this.t('gateway.channel.imessage'),  icon: 'feather-message-circle', color: '#34C759' },
         ];
         const el = document.getElementById('gw-channel-cards');
         if (!el) return;
+        channels.forEach(ch => this._captureChannelUIState(ch.id));
         el.innerHTML = channels.map(ch => this._channelCardHTML(ch)).join('');
+        channels.forEach(ch => this._restoreChannelUIState(ch.id));
         if (window.feather) feather.replace({ 'stroke-width': 2 });
     },
 
@@ -1363,19 +1366,19 @@ Object.assign(SingleCellAnalysis.prototype, {
         const starting = status === 'starting';
         const cfg = (this._gwConfig || {})[ch.id] || {};
         const statusBadge = running
-            ? `<span class="badge bg-success">running</span>`
+            ? `<span class="badge bg-success">${this.t('gateway.status.running')}</span>`
             : failed
-                ? `<span class="badge bg-danger">failed</span>`
+                ? `<span class="badge bg-danger">${this.t('gateway.status.failed')}</span>`
                 : starting
-                    ? `<span class="badge bg-warning text-dark">starting</span>`
+                    ? `<span class="badge bg-warning text-dark">${this.t('gateway.status.starting')}</span>`
                     : state.configured
-                        ? `<span class="badge bg-secondary">stopped</span>`
-                        : `<span class="badge bg-dark">not configured</span>`;
+                        ? `<span class="badge bg-secondary">${this.t('gateway.status.stopped')}</span>`
+                        : `<span class="badge bg-dark">${this.t('gateway.status.notConfigured')}</span>`;
         const primaryBtn = running
-            ? `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>Running</button>`
+            ? `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${this.t('gateway.button.running')}</button>`
             : failed
-                ? `<button class="btn btn-sm btn-warning" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>Run</button>`
-                : `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${state.configured ? 'Stopped' : 'Not configured'}</button>`;
+                ? `<button class="btn btn-sm btn-warning" onclick="singleCellApp.startChannel('${ch.id}')"><i class="feather-play me-1"></i>${this.t('common.run')}</button>`
+                : `<button class="btn btn-sm btn-secondary" disabled><i class="feather-play me-1"></i>${state.configured ? this.t('gateway.button.stopped') : this.t('gateway.button.notConfigured')}</button>`;
 
         return `
         <div class="card mb-3" id="gw-card-${ch.id}">
@@ -1388,9 +1391,9 @@ Object.assign(SingleCellAnalysis.prototype, {
                 </div>
                 <div class="d-flex align-items-center gap-2" onclick="event.stopPropagation()">
                     <button class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.testChannel('${ch.id}')">
-                        <i class="feather-zap me-1"></i>Test
+                        <i class="feather-zap me-1"></i>${this.t('gateway.button.test')}
                     </button>
-                    ${running ? `<button class="btn btn-sm btn-danger" onclick="singleCellApp.stopChannel('${ch.id}')"><i class="feather-square me-1"></i>Stop</button>` : primaryBtn}
+                    ${running ? `<button class="btn btn-sm btn-danger" onclick="singleCellApp.stopChannel('${ch.id}')"><i class="feather-square me-1"></i>${this.t('gateway.button.stop')}</button>` : primaryBtn}
                     <i class="feather-chevron-down" id="gw-chevron-${ch.id}"></i>
                 </div>
             </div>
@@ -1399,14 +1402,14 @@ Object.assign(SingleCellAnalysis.prototype, {
                 <div id="gw-ch-result-${ch.id}" class="mt-2" style="font-size:0.82rem;display:none;"></div>
                 <div class="mt-3 d-flex justify-content-between align-items-center">
                     <button class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.toggleChannelLogs('${ch.id}')">
-                        <i class="feather-terminal me-1"></i>Logs
+                        <i class="feather-terminal me-1"></i>${this.t('gateway.button.logs')}
                     </button>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-primary" onclick="singleCellApp.testChannel('${ch.id}')">
-                            <i class="feather-zap me-1"></i>Test Connection
+                            <i class="feather-zap me-1"></i>${this.t('gateway.button.testConnection')}
                         </button>
                         <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveChannelConfig('${ch.id}')">
-                            <i class="feather-save me-1"></i>Save
+                            <i class="feather-save me-1"></i>${this.t('gateway.button.save')}
                         </button>
                     </div>
                 </div>
@@ -1415,7 +1418,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                     <div style="background:#1a1a2e;color:#a8d8a8;font-size:0.73rem;font-family:monospace;
                                 border-radius:6px;padding:10px 12px;max-height:220px;overflow-y:auto;
                                 white-space:pre-wrap;word-break:break-all;" id="gw-log-body-${ch.id}">
-                        No output yet.
+                        ${this.t('gateway.noOutputYet')}
                     </div>
                 </div>
             </div>
@@ -1441,10 +1444,10 @@ Object.assign(SingleCellAnalysis.prototype, {
             return `
             <div class="col-md-6">
                 <label class="form-label small fw-semibold mb-1">${label}
-                    ${already ? '<span class="badge bg-success ms-1" style="font-size:0.65rem;">set</span>' : '<span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">not set</span>'}
+                    ${already ? `<span class=\"badge bg-success ms-1\" style=\"font-size:0.65rem;\">${this.t('gateway.secret.set')}</span>` : `<span class=\"badge bg-warning text-dark ms-1\" style=\"font-size:0.65rem;\">${this.t('gateway.secret.notSet')}</span>`}
                 </label>
                 <input type="password" id="gw-field-${ch}-${id}" class="form-control form-control-sm"
-                       value="" placeholder="${already ? '(already set — leave blank to keep)' : 'Enter value'}">
+                       value="" placeholder="${already ? this.t('gateway.secret.keepExisting') : this.t('gateway.secret.enterValue')}">
                 ${hint ? `<div class="form-text" style="font-size:0.72rem;">${hint}</div>` : ''}
             </div>`;
         };
@@ -1465,33 +1468,33 @@ Object.assign(SingleCellAnalysis.prototype, {
             </div>`;
 
         if (ch === 'telegram') return `<div class="row g-2">
-            ${secret('token','Bot Token','telegram','Get from @BotFather — set TELEGRAM_BOT_TOKEN env var or enter here')}
-            ${field('allowed_users','Allowed Users <span class="text-muted fw-normal">(comma-sep usernames/IDs)</span>','text', (cfg.allowed_users||[]).join(', '), '@username or 123456789', 'Leave empty to allow all users')}
+            ${secret('token',this.t('gateway.telegram.token'),'telegram',this.t('gateway.telegram.tokenHint'))}
+            ${field('allowed_users',this.t('gateway.telegram.allowedUsers'),'text', (cfg.allowed_users||[]).join(', '), this.t('gateway.telegram.allowedUsersPlaceholder'), this.t('gateway.telegram.allowedUsersHint'))}
         </div>`;
 
         if (ch === 'feishu') return `<div class="row g-2">
-            ${field('app_id','App ID','text', cfg.app_id||'', 'cli_xxxxxxxxxx', '')}
-            ${secret('app_secret','App Secret','feishu','Set FEISHU_APP_SECRET env var or enter here')}
-            ${select('connection_mode','Connection Mode',['websocket','webhook'], cfg.connection_mode||'websocket')}
-            ${secret('verification_token','Verification Token','feishu','Webhook only — optional')}
-            ${secret('encrypt_key','Encrypt Key','feishu','Optional')}
-            ${field('host','Webhook Host','text', cfg.host||'0.0.0.0', '0.0.0.0', 'webhook mode only')}
-            ${field('port','Webhook Port','number', cfg.port||8080, '8080', '')}
-            ${field('path','Webhook Path','text', cfg.path||'/feishu/events', '/feishu/events', '')}
+            ${field('app_id',this.t('gateway.feishu.appId'),'text', cfg.app_id||'', 'cli_xxxxxxxxxx', '')}
+            ${secret('app_secret',this.t('gateway.feishu.appSecret'),'feishu','Set FEISHU_APP_SECRET env var or enter here')}
+            ${select('connection_mode',this.t('gateway.feishu.connectionMode'),['websocket','webhook'], cfg.connection_mode||'websocket')}
+            ${secret('verification_token',this.t('gateway.feishu.verificationToken'),'feishu',this.t('gateway.feishu.verificationTokenHint'))}
+            ${secret('encrypt_key',this.t('gateway.feishu.encryptKey'),'feishu',this.t('gateway.feishu.encryptKeyHint'))}
+            ${field('host',this.t('gateway.feishu.webhookHost'),'text', cfg.host||'0.0.0.0', '0.0.0.0', this.t('gateway.feishu.webhookHostHint'))}
+            ${field('port',this.t('gateway.feishu.webhookPort'),'number', cfg.port||8080, '8080', '')}
+            ${field('path',this.t('gateway.feishu.webhookPath'),'text', cfg.path||'/feishu/events', '/feishu/events', '')}
         </div>`;
 
         if (ch === 'qq') return `<div class="row g-2">
-            ${field('app_id','App ID','text', cfg.app_id||'', 'QQ Bot AppID (numeric)', 'From QQ Open Platform → My Apps')}
-            ${secret('client_secret','Client Secret','qq','Set QQ_CLIENT_SECRET env var or enter here')}
-            ${field('image_host','Image Host <span class="text-muted fw-normal">(for figures)</span>','text', cfg.image_host||'', 'http://YOUR_IP:8081', 'Required to send charts; leave empty to skip')}
-            ${field('image_server_port','Image Server Port','number', cfg.image_server_port||8081, '8081', '')}
-            ${checkbox('markdown','Enable Markdown replies (msg_type=2, requires QQ Open Platform permission)', cfg.markdown)}
+            ${field('app_id',this.t('gateway.qq.appId'),'text', cfg.app_id||'', 'QQ Bot AppID (numeric)', this.t('gateway.qq.appIdHint'))}
+            ${secret('client_secret',this.t('gateway.qq.clientSecret'),'qq',this.t('gateway.qq.clientSecretHint'))}
+            ${field('image_host',this.t('gateway.qq.imageHost'),'text', cfg.image_host||'', 'http://YOUR_IP:8081', this.t('gateway.qq.imageHostHint'))}
+            ${field('image_server_port',this.t('gateway.qq.imageServerPort'),'number', cfg.image_server_port||8081, '8081', '')}
+            ${checkbox('markdown',this.t('gateway.qq.markdown'), cfg.markdown)}
         </div>`;
 
         if (ch === 'imessage') return `<div class="row g-2">
-            ${field('cli_path','imsg CLI Path','text', cfg.cli_path||'imsg', 'imsg', 'Path to the imsg binary')}
-            ${field('db_path','chat.db Path','text', cfg.db_path||'~/Library/Messages/chat.db', '~/Library/Messages/chat.db', '')}
-            ${checkbox('include_attachments','Include attachment metadata', cfg.include_attachments)}
+            ${field('cli_path',this.t('gateway.imessage.cliPath'),'text', cfg.cli_path||'imsg', 'imsg', this.t('gateway.imessage.cliPathHint'))}
+            ${field('db_path',this.t('gateway.imessage.dbPath'),'text', cfg.db_path||'~/Library/Messages/chat.db', '~/Library/Messages/chat.db', '')}
+            ${checkbox('include_attachments',this.t('gateway.imessage.includeAttachments'), cfg.include_attachments)}
         </div>`;
 
         return '';
@@ -1503,9 +1506,80 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (!body) return;
         const open = body.style.display !== 'none';
         body.style.display = open ? 'none' : 'block';
+        this._ensureChannelUIState(ch).cardOpen = !open;
         if (chevron) {
             chevron.className = open ? 'feather-chevron-down' : 'feather-chevron-up';
             if (window.feather) feather.replace({ 'stroke-width': 2 });
+        }
+    },
+
+    _ensureChannelUIState(ch) {
+        if (!this._gwChannelUIState) this._gwChannelUIState = {};
+        if (!this._gwChannelUIState[ch]) {
+            this._gwChannelUIState[ch] = {
+                cardOpen: false,
+                logsOpen: false,
+                formValues: null,
+                resultHTML: '',
+                resultVisible: false,
+                logText: '',
+            };
+        }
+        return this._gwChannelUIState[ch];
+    },
+
+    _captureChannelUIState(ch) {
+        const state = this._ensureChannelUIState(ch);
+        const body = document.getElementById(`gw-body-${ch}`);
+        const logPanel = document.getElementById(`gw-log-${ch}`);
+        const resultEl = document.getElementById(`gw-ch-result-${ch}`);
+        const logBody = document.getElementById(`gw-log-body-${ch}`);
+        if (body) state.cardOpen = body.style.display !== 'none';
+        if (logPanel) state.logsOpen = logPanel.style.display !== 'none';
+        state.formValues = this._getChannelFormValues(ch);
+        if (resultEl) {
+            state.resultHTML = resultEl.innerHTML || '';
+            state.resultVisible = resultEl.style.display !== 'none';
+        }
+        if (logBody) state.logText = logBody.textContent || '';
+    },
+
+    _restoreChannelUIState(ch) {
+        const state = this._ensureChannelUIState(ch);
+        const body = document.getElementById(`gw-body-${ch}`);
+        const chevron = document.getElementById(`gw-chevron-${ch}`);
+        const logPanel = document.getElementById(`gw-log-${ch}`);
+        const resultEl = document.getElementById(`gw-ch-result-${ch}`);
+        const logBody = document.getElementById(`gw-log-body-${ch}`);
+        if (body) body.style.display = state.cardOpen ? 'block' : 'none';
+        if (chevron) chevron.className = state.cardOpen ? 'feather-chevron-up' : 'feather-chevron-down';
+        if (logPanel) logPanel.style.display = state.logsOpen ? 'block' : 'none';
+        if (resultEl) {
+            resultEl.innerHTML = state.resultHTML || '';
+            resultEl.style.display = state.resultVisible ? 'block' : 'none';
+        }
+        if (logBody && state.logText) {
+            logBody.textContent = state.logText;
+        }
+        const values = state.formValues || {};
+        Object.entries(values).forEach(([key, value]) => {
+            const field = document.getElementById(`gw-field-${ch}-${key}`);
+            if (!field) return;
+            if (field.type === 'checkbox') {
+                field.checked = !!value;
+            } else if (Array.isArray(value)) {
+                field.value = value.join(', ');
+            } else if (value !== null && value !== undefined) {
+                field.value = value;
+            }
+        });
+        if (state.logsOpen) {
+            if (!this._logPollers[ch]) {
+                this._startChannelLogPolling(ch);
+            }
+        } else if (this._logPollers[ch]) {
+            clearInterval(this._logPollers[ch]);
+            delete this._logPollers[ch];
         }
     },
 
@@ -1544,6 +1618,9 @@ Object.assign(SingleCellAnalysis.prototype, {
         el.style.display = 'block';
         el.innerHTML = `<span class="${ok ? 'text-success' : 'text-danger'}">
             <i class="${ok ? 'feather-check-circle' : 'feather-x-circle'} me-1"></i>${this._esc(msg)}</span>`;
+        const state = this._ensureChannelUIState(ch);
+        state.resultHTML = el.innerHTML;
+        state.resultVisible = true;
         if (window.feather) feather.replace({ 'stroke-width': 2 });
     },
 
@@ -1564,8 +1641,8 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (resultEl) {
                 resultEl.style.display = 'block';
                 resultEl.innerHTML = data.ok
-                    ? `<span class="text-success"><i class="feather-check-circle me-1"></i>Saved to ${data.path}</span>`
-                    : `<span class="text-danger"><i class="feather-x-circle me-1"></i>${this._esc(data.error || 'Save failed')}</span>`;
+                    ? `<span class="text-success"><i class="feather-check-circle me-1"></i>${this.t('gateway.savedTo')} ${data.path}</span>`
+                    : `<span class="text-danger"><i class="feather-x-circle me-1"></i>${this._esc(data.error || this.t('gateway.saveFailed'))}</span>`;
                 if (window.feather) feather.replace({ 'stroke-width': 2 });
             }
             if (data.ok) {
@@ -1592,9 +1669,9 @@ Object.assign(SingleCellAnalysis.prototype, {
         .then(data => {
             if (data.ok) {
                 this._gwConfig = cfg;
-                this._showChResult(ch, true, `Saved to ${data.path}`);
+                this._showChResult(ch, true, `${this.t('gateway.savedTo')} ${data.path}`);
             } else {
-                this._showChResult(ch, false, data.error || 'Save failed');
+                this._showChResult(ch, false, data.error || this.t('gateway.saveFailed'));
             }
         })
         .catch(e => this._showChResult(ch, false, e.message));
@@ -1608,7 +1685,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         const resultEl = document.getElementById(`gw-ch-result-${ch}`);
         if (resultEl) {
             resultEl.style.display = 'block';
-            resultEl.innerHTML = `<span class="text-muted"><i class="feather-loader me-1"></i>Testing…</span>`;
+            resultEl.innerHTML = `<span class="text-muted"><i class="feather-loader me-1"></i>${this.t('gateway.testing')}</span>`;
             if (window.feather) feather.replace({ 'stroke-width': 2 });
         }
         const body_ = this._getChannelFormValues(ch);
@@ -1624,7 +1701,7 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     startChannel(ch) {
         const btn = document.querySelector(`#gw-card-${ch} button[onclick*="startChannel"]`);
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="feather-loader me-1"></i>Starting…'; if (window.feather) feather.replace({ 'stroke-width': 2 }); }
+        if (btn) { btn.disabled = true; btn.innerHTML = `<i class=\"feather-loader me-1\"></i>${this.t('gateway.startingEllipsis')}`; if (window.feather) feather.replace({ 'stroke-width': 2 }); }
         // Save current form values first, then start
         const chVals = this._getChannelFormValues(ch);
         const cfg = Object.assign({}, this._gwConfig || {});
@@ -1647,17 +1724,17 @@ Object.assign(SingleCellAnalysis.prototype, {
                     pid: data.pid,
                     configured: prev.configured !== undefined ? prev.configured : true,
                 });
-                this._showChResult(ch, true, data.message || `Started (pid=${data.pid})`);
+                this._showChResult(ch, true, data.message || `${this.t('gateway.started')} (pid=${data.pid})`);
             } else {
                 this._gwProcesses = this._gwProcesses.filter(p => p.channel !== ch);
                 this._gwProcesses.push({
                     channel: ch,
                     running: false,
                     status: 'failed',
-                    error: data.error || 'Start failed',
+                    error: data.error || this.t('gateway.startFailed'),
                     configured: prev.configured !== undefined ? prev.configured : true,
                 });
-                this._showChResult(ch, false, data.error || 'Start failed');
+                this._showChResult(ch, false, data.error || this.t('gateway.startFailed'));
             }
             this._renderChannelCards();
         })
@@ -1701,43 +1778,49 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     _logPollers: {},
 
-    toggleChannelLogs(ch) {
-        const panel = document.getElementById(`gw-log-${ch}`);
-        if (!panel) return;
-        const open = panel.style.display !== 'none';
-        panel.style.display = open ? 'none' : 'block';
-        if (open) {
-            // Stop polling
-            if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
-            return;
-        }
-        // Start polling logs every 2 s
+    _startChannelLogPolling(ch) {
         const fetchLogs = () => {
             fetch(`/api/gateway/channels/${ch}/logs`)
                 .then(r => r.ok ? r.json() : null)
                 .then(data => {
                     const body = document.getElementById(`gw-log-body-${ch}`);
                     if (!body) return;
-                    if (!data) { body.textContent = 'Log endpoint not available.'; return; }
+                    if (!data) { body.textContent = this.t('gateway.logUnavailable'); return; }
                     if (data.logs) {
-                        // Always show buffered logs — crash output survives process exit
                         const status = data.running ? '' : '\n[process has exited]';
                         body.textContent = data.logs + status;
                         body.scrollTop = body.scrollHeight;
+                        this._ensureChannelUIState(ch).logText = body.textContent;
                         if (!data.running) {
                             if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
                         }
                     } else if (!data.running) {
-                        body.textContent = 'Process not running. Click Start to launch, then open Logs.';
+                        body.textContent = this.t('gateway.processNotRunning');
+                        this._ensureChannelUIState(ch).logText = body.textContent;
                         if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
                     } else {
-                        body.textContent = '(no output yet — waiting...)';
+                        body.textContent = this.t('gateway.waitingOutput');
+                        this._ensureChannelUIState(ch).logText = body.textContent;
                     }
                 })
                 .catch(() => {});
         };
         fetchLogs();
         this._logPollers[ch] = setInterval(fetchLogs, 2000);
+    },
+
+    toggleChannelLogs(ch) {
+        const panel = document.getElementById(`gw-log-${ch}`);
+        if (!panel) return;
+        const open = panel.style.display !== 'none';
+        panel.style.display = open ? 'none' : 'block';
+        this._ensureChannelUIState(ch).logsOpen = !open;
+        if (open) {
+            // Stop polling
+            if (this._logPollers[ch]) { clearInterval(this._logPollers[ch]); delete this._logPollers[ch]; }
+            return;
+        }
+        this._startChannelLogPolling(ch);
     },
 
     loadSkills(force = false) {
