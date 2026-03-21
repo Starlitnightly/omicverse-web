@@ -10,14 +10,13 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.accountConfigured = true;
         this.accountUser = this.readCachedAccountProfile();
         this.accountMenuOpen = false;
-        this.accountForceLogin = false;
-        this.accountLauncher = 'omicverse';
-        this.accountAuthModalOpen = false;
+        this.accountCenterEditable = false;
+        this.runtimeConfig = this.getRuntimeConfigDefaults();
         this.bindAccountCenterEvents();
+        this.applyRuntimeBranding();
         this.updateAccountMenu();
-        this.loadAccountConfig()
-            .catch(() => {})
-            .finally(() => this.refreshAccountProfile());
+        this.refreshAccountProfile();
+        this.loadRuntimeConfig();
     },
 
     bindAccountCenterEvents() {
@@ -81,24 +80,15 @@ Object.assign(SingleCellAnalysis.prototype, {
             registerForm.addEventListener('submit', (event) => this.submitRegister(event));
         }
 
+        ['account-login-tab', 'account-register-tab'].forEach((id) => {
+            const element = byId(id);
+            if (!element) return;
+            element.addEventListener('shown.bs.tab', () => this.applyRuntimeBranding());
+        });
+
         const profileForm = byId('account-profile-form');
         if (profileForm) {
             profileForm.addEventListener('submit', (event) => this.submitProfileUpdate(event));
-        }
-
-        const authModal = byId('accountAuthModal');
-        if (authModal) {
-            authModal.addEventListener('hide.bs.modal', (event) => {
-                if (this.accountForceLogin && !this.accountUser) {
-                    event.preventDefault();
-                }
-            });
-            authModal.addEventListener('shown.bs.modal', () => {
-                this.accountAuthModalOpen = true;
-            });
-            authModal.addEventListener('hidden.bs.modal', () => {
-                this.accountAuthModalOpen = false;
-            });
         }
 
         const accountCenterForm = byId('account-center-form');
@@ -107,42 +97,159 @@ Object.assign(SingleCellAnalysis.prototype, {
         }
     },
 
-    async loadAccountConfig() {
-        try {
-            const response = await fetch('/api/config');
-            const data = await response.json();
-            this.accountForceLogin = !!data.force_login;
-            this.accountLauncher = data.launcher || 'omicverse';
-        } catch (_) {
-            this.accountForceLogin = false;
-            this.accountLauncher = 'omicverse';
-        }
-        this._syncForcedLoginState();
+    getRuntimeConfigDefaults() {
+        return {
+            launcher: 'omicverse',
+            force_login: false,
+            brand: {
+                product_name: 'OmicVerse',
+                tag: 'OmicVerse',
+                logo_url: 'static/picture/logo.png',
+            },
+        };
     },
 
-    _syncForcedLoginState() {
-        const forceLock = !!(this.accountForceLogin && !this.accountUser);
-        const modalEl = document.getElementById('accountAuthModal');
-        const closeBtn = modalEl ? modalEl.querySelector('.btn-close') : null;
-        if (closeBtn) {
-            closeBtn.style.display = forceLock ? 'none' : '';
-        }
-        document.body.classList.toggle('ov-force-login', forceLock);
-        if (!modalEl || !window.bootstrap) {
-            return;
-        }
-        if (!forceLock) {
-            if (modalEl.classList.contains('show')) {
-                const existing = bootstrap.Modal.getInstance(modalEl);
-                if (existing) {
-                    existing.hide();
-                }
+    async loadRuntimeConfig() {
+        try {
+            const response = await fetch('/api/runtime-config');
+            const data = await response.json();
+            if (response.ok && data) {
+                const defaults = this.getRuntimeConfigDefaults();
+                this.runtimeConfig = {
+                    ...defaults,
+                    ...data,
+                    brand: {
+                        ...defaults.brand,
+                        ...(data.brand || {}),
+                    },
+                };
             }
+        } catch (_) {
+            this.runtimeConfig = this.runtimeConfig || this.getRuntimeConfigDefaults();
+        }
+        this.applyRuntimeBranding();
+        this.maybeEnforceLogin();
+    },
+
+    isOmicClawLauncher() {
+        return String(this.runtimeConfig?.launcher || '').toLowerCase() === 'omicclaw';
+    },
+
+    applyRuntimeBranding() {
+        const brand = this.runtimeConfig?.brand || this.getRuntimeConfigDefaults().brand;
+        const productName = brand.product_name || 'OmicVerse';
+        const logoUrl = brand.logo_url || 'static/picture/logo.png';
+        const isClaw = this.isOmicClawLauncher();
+        const isZh = this.currentLang === 'zh';
+        const brandTitle = isZh
+            ? (isClaw ? 'Agent 登录工作台' : '科研账号工作台')
+            : (isClaw ? 'Agent account workspace' : 'Research account workspace');
+        const brandSubtitle = isZh
+            ? (isClaw
+                ? '登录后可同步你的 Agent 身份、在线技能权限与长期使用资料。'
+                : '登录后可同步你的个人资料、在线技能访问权限和长期身份信息。')
+            : (isClaw
+                ? 'Sign in to sync your agent identity, online skill access, and persistent profile details.'
+                : 'Sign in to sync your profile, online skill access, and persistent research identity.');
+
+        document.querySelectorAll('[data-brand-logo]').forEach((img) => {
+            img.setAttribute('src', logoUrl);
+            img.setAttribute('alt', productName);
+        });
+
+        const brandTag = document.getElementById('account-auth-brand-tag');
+        const brandTitleEl = document.getElementById('account-auth-brand-title');
+        const brandSubtitleEl = document.getElementById('account-auth-brand-subtitle');
+        if (brandTag) brandTag.textContent = brand.tag || productName;
+        if (brandTitleEl) brandTitleEl.textContent = brandTitle;
+        if (brandSubtitleEl) brandSubtitleEl.textContent = brandSubtitle;
+
+        document.body.dataset.launcher = String(this.runtimeConfig?.launcher || 'omicverse');
+    },
+
+    maybeEnforceLogin() {
+        if (!this.runtimeConfig?.force_login || this.accountUser || this._forceLoginPrompted) {
             return;
         }
-        if (!modalEl.classList.contains('show')) {
-            this.openAuthModal('login');
-        }
+        this._forceLoginPrompted = true;
+        this.openAuthModal('login');
+    },
+
+    getAccountFieldMap(prefix) {
+        const maps = {
+            register: {
+                display_name: 'account-register-name',
+                full_name: 'account-register-full-name',
+                institution: 'account-register-institution',
+                research_area: 'account-register-research-area',
+                usage_purpose: 'account-register-usage-purpose',
+                email: 'account-register-email',
+                password: 'account-register-password',
+            },
+            profile: {
+                display_name: 'account-profile-display-name',
+                full_name: 'account-profile-full-name',
+                institution: 'account-profile-institution',
+                research_area: 'account-profile-research-area',
+                usage_purpose: 'account-profile-usage-purpose',
+                email: 'account-profile-email',
+            },
+            center: {
+                display_name: 'account-center-display-name',
+                full_name: 'account-center-full-name',
+                institution: 'account-center-institution',
+                research_area: 'account-center-research-area',
+                usage_purpose: 'account-center-usage-purpose',
+                email: 'account-center-email',
+            },
+        };
+        return maps[prefix] || {};
+    },
+
+    readAccountField(id) {
+        const el = document.getElementById(id);
+        return el ? String(el.value || '').trim() : '';
+    },
+
+    collectAccountProfilePayload(prefix) {
+        const map = this.getAccountFieldMap(prefix);
+        return {
+            display_name: this.readAccountField(map.display_name),
+            full_name: this.readAccountField(map.full_name),
+            institution: this.readAccountField(map.institution),
+            research_area: this.readAccountField(map.research_area),
+            usage_purpose: this.readAccountField(map.usage_purpose),
+        };
+    },
+
+    populateAccountProfileFields(prefix, user = {}, editable = false) {
+        const map = this.getAccountFieldMap(prefix);
+        const values = {
+            display_name: user.display_name || '',
+            full_name: user.full_name || '',
+            institution: user.institution || '',
+            research_area: user.research_area || '',
+            usage_purpose: user.usage_purpose || '',
+            email: user.email || '',
+        };
+
+        Object.entries(map).forEach(([key, id]) => {
+            const element = document.getElementById(id);
+            if (!element) return;
+            element.value = values[key] || '';
+            if (key === 'email') {
+                element.readOnly = true;
+                return;
+            }
+            if (prefix !== 'register') {
+                element.readOnly = !editable;
+            }
+        });
+    },
+
+    formatAccountValue(value, fallback = '-') {
+        const text = String(value || '').trim();
+        return text || fallback;
     },
 
     toggleAccountMenu() {
@@ -321,12 +428,12 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     openAuthModal(mode = 'login') {
         this.closeAccountMenu();
+        this.applyRuntimeBranding();
         this.hideResendButton();
-        const forceLock = !!(this.accountForceLogin && !this.accountUser);
         this.showAccountMessage(
             'account-auth-message',
-            !this.accountConfigured ? this.t('account.serverOffline') : (forceLock ? this.t('account.authRequired') : ''),
-            !this.accountConfigured || forceLock ? 'warning' : 'danger'
+            this.accountConfigured ? '' : this.t('account.serverOffline'),
+            this.accountConfigured ? 'danger' : 'warning'
         );
         const targetId = mode === 'register' ? 'account-register-tab' : 'account-login-tab';
         const target = document.getElementById(targetId);
@@ -335,19 +442,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         }
         const modalEl = document.getElementById('accountAuthModal');
         if (modalEl && window.bootstrap) {
-            const closeBtn = modalEl.querySelector('.btn-close');
-            if (closeBtn) {
-                closeBtn.style.display = forceLock ? 'none' : '';
-            }
-            const existing = bootstrap.Modal.getInstance(modalEl);
-            if (existing) {
-                existing.dispose();
-            }
-            const modal = new bootstrap.Modal(modalEl, {
-                backdrop: forceLock ? 'static' : true,
-                keyboard: !forceLock,
-            });
-            modal.show();
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
         } else if (!this.accountConfigured) {
             alert(this.t('account.serverOffline'));
         }
@@ -368,13 +463,7 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (title) {
             title.textContent = editable ? this.t('account.settings') : this.t('account.profile');
         }
-        if (displayName) {
-            displayName.value = this.accountUser.display_name || '';
-            displayName.readOnly = !editable;
-        }
-        if (email) {
-            email.value = this.accountUser.email || '';
-        }
+        this.populateAccountProfileFields('profile', this.accountUser, editable);
         if (hint) {
             hint.textContent = editable ? this.t('account.profileHintEditable') : this.t('account.profileHintReadonly');
         }
@@ -412,10 +501,11 @@ Object.assign(SingleCellAnalysis.prototype, {
         const email = document.getElementById('account-view-email');
         const created = document.getElementById('account-view-created');
         const status = document.getElementById('account-view-status');
+        const fullName = document.getElementById('account-view-full-name');
+        const institution = document.getElementById('account-view-institution');
+        const researchArea = document.getElementById('account-view-research-area');
         const panelTitle = document.getElementById('account-panel-title');
         const panelSubtitle = document.getElementById('account-panel-subtitle');
-        const displayNameInput = document.getElementById('account-center-display-name');
-        const emailInput = document.getElementById('account-center-email');
         const hint = document.getElementById('account-center-hint');
         const saveBtn = document.getElementById('account-center-save-btn');
         const editBtn = document.getElementById('account-center-edit-btn');
@@ -427,6 +517,9 @@ Object.assign(SingleCellAnalysis.prototype, {
             if (email) email.textContent = '-';
             if (created) created.textContent = this.t('account.serverOffline');
             if (status) status.textContent = this.t('account.guest');
+            if (fullName) fullName.textContent = '-';
+            if (institution) institution.textContent = '-';
+            if (researchArea) researchArea.textContent = '-';
             return;
         }
 
@@ -437,15 +530,12 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (email) email.textContent = user.email || '-';
         if (created) created.textContent = `${this.t('account.memberSince')}: ${this.formatAccountDate(user.created_at)}`;
         if (status) status.textContent = editable ? this.t('account.editing') : this.t('account.active');
+        if (fullName) fullName.textContent = this.formatAccountValue(user.full_name, this.formatAccountValue(user.display_name));
+        if (institution) institution.textContent = this.formatAccountValue(user.institution);
+        if (researchArea) researchArea.textContent = this.formatAccountValue(user.research_area);
         if (panelTitle) panelTitle.textContent = editable ? this.t('account.settings') : this.t('account.profile');
         if (panelSubtitle) panelSubtitle.textContent = this.t('account.profileIntro');
-        if (displayNameInput) {
-            displayNameInput.value = user.display_name || '';
-            displayNameInput.readOnly = !editable;
-        }
-        if (emailInput) {
-            emailInput.value = user.email || '';
-        }
+        this.populateAccountProfileFields('center', user, editable);
         if (hint) {
             hint.textContent = editable ? this.t('account.profileHintEditable') : this.t('account.profileHintReadonly');
         }
@@ -491,10 +581,10 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountConfigured = false;
         }
         this.updateAccountMenu();
-        this._syncForcedLoginState();
         if (this.currentView === 'account') {
             this.renderAccountCenter();
         }
+        this.maybeEnforceLogin();
     },
 
     async submitLogin(event) {
@@ -527,7 +617,6 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountUser = data.user || null;
             this.cacheAccountProfile(this.accountUser);
             this.updateAccountMenu();
-            this._syncForcedLoginState();
             const modalEl = document.getElementById('accountAuthModal');
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -542,7 +631,7 @@ Object.assign(SingleCellAnalysis.prototype, {
 
     async submitRegister(event) {
         event.preventDefault();
-        const display_name = document.getElementById('account-register-name')?.value?.trim() || '';
+        const payload = this.collectAccountProfilePayload('register');
         const email = document.getElementById('account-register-email')?.value?.trim() || '';
         const password = document.getElementById('account-register-password')?.value || '';
 
@@ -555,7 +644,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             const response = await fetch('/api/account/register', {
                 method: 'POST',
                 headers: this.getAccountHeaders(true),
-                body: JSON.stringify({ display_name, email, password }),
+                body: JSON.stringify({ ...payload, email, password }),
             });
             const data = await response.json();
             if (!response.ok || data.error) {
@@ -572,7 +661,6 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountUser = data.user || null;
             this.cacheAccountProfile(this.accountUser);
             this.updateAccountMenu();
-            this._syncForcedLoginState();
             const modalEl = document.getElementById('accountAuthModal');
             if (modalEl && window.bootstrap) {
                 bootstrap.Modal.getOrCreateInstance(modalEl).hide();
@@ -589,12 +677,12 @@ Object.assign(SingleCellAnalysis.prototype, {
         event.preventDefault();
         if (!this.accountUser) return;
 
-        const display_name = document.getElementById('account-profile-display-name')?.value?.trim() || '';
+        const payload = this.collectAccountProfilePayload('profile');
         try {
             const response = await fetch('/api/account/profile', {
                 method: 'PATCH',
                 headers: this.getAccountHeaders(true),
-                body: JSON.stringify({ display_name }),
+                body: JSON.stringify(payload),
             });
             const data = await response.json();
             if (!response.ok || data.error) {
@@ -603,6 +691,7 @@ Object.assign(SingleCellAnalysis.prototype, {
             this.accountUser = data.user || this.accountUser;
             this.cacheAccountProfile(this.accountUser);
             this.updateAccountMenu();
+            this.renderAccountCenter();
             this.showAccountMessage('account-profile-message', this.t('account.profileSaved'), 'success');
             this.showStatus(this.t('account.profileSaved'), false);
         } catch (error) {
@@ -613,12 +702,12 @@ Object.assign(SingleCellAnalysis.prototype, {
     async submitAccountCenterUpdate(event) {
         event.preventDefault();
         if (!this.accountCenterEditable) return;
-        const display_name = document.getElementById('account-center-display-name')?.value?.trim() || '';
+        const payload = this.collectAccountProfilePayload('center');
         try {
             const response = await fetch('/api/account/profile', {
                 method: 'PATCH',
                 headers: this.getAccountHeaders(true),
-                body: JSON.stringify({ display_name }),
+                body: JSON.stringify(payload),
             });
             const data = await response.json();
             if (!response.ok || data.error) {
@@ -651,7 +740,6 @@ Object.assign(SingleCellAnalysis.prototype, {
         this.accountCenterEditable = false;
         this.skillsLoaded = false;
         this.updateAccountMenu();
-        this._syncForcedLoginState();
         if (this.currentView === 'account' && this.switchView) {
             this.switchView('visualization');
         }

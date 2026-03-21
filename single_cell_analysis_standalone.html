@@ -78,7 +78,7 @@
         <div class="navbar-wrapper">
             <div class="m-header">
                 <a href="index.html" class="b-brand d-flex align-items-center">
-                    <img src="static/picture/logo.png" alt="OmicVerse" class="brand-logo-left"/>
+                    <img src="static/picture/logo.png" alt="OmicVerse" class="brand-logo-left" id="sidebar-brand-logo" data-brand-logo="sidebar"/>
                 </a>
             </div>
             <div class="navbar-content">
@@ -156,45 +156,6 @@
                             <span class="nxl-micon"><i class="feather-info"></i></span>
                             <span class="nxl-mtext" data-i18n="nav.envInfo">Python 环境信息</span>
                             <span class="nxl-arrow"></span>
-                        </a>
-                    </li>
-                </ul>
-                <!-- Gateway Nav -->
-                <ul class="nxl-navbar" id="gateway-nav" style="display: none;">
-                    <li class="nxl-item nxl-caption">
-                        <label data-i18n="gateway.navTitle">Gateway</label>
-                    </li>
-                    <li class="nxl-item">
-                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link active" id="gw-nav-overview" onclick="singleCellApp.showGatewayTab('overview')">
-                            <span class="nxl-micon"><i class="feather-activity"></i></span>
-                            <span class="nxl-mtext" data-i18n="gateway.overview">Overview</span>
-                        </a>
-                    </li>
-                    <li class="nxl-item">
-                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-channels" onclick="singleCellApp.showGatewayTab('channels')">
-                            <span class="nxl-micon"><i class="feather-radio"></i></span>
-                            <span class="nxl-mtext" data-i18n="gateway.channels">Channels</span>
-                        </a>
-                    </li>
-                    <li class="nxl-item">
-                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-sessions" onclick="singleCellApp.showGatewayTab('sessions')">
-                            <span class="nxl-micon"><i class="feather-users"></i></span>
-                            <span class="nxl-mtext" data-i18n="gateway.sessions">Sessions</span>
-                        </a>
-                    </li>
-                    <li class="nxl-item">
-                        <a href="javascript:void(0);" class="nxl-link gateway-nav-link" id="gw-nav-memory" onclick="singleCellApp.showGatewayTab('memory')">
-                            <span class="nxl-micon"><i class="feather-database"></i></span>
-                            <span class="nxl-mtext" data-i18n="gateway.memory">Memory</span>
-                        </a>
-                    </li>
-                    <li class="nxl-item nxl-caption">
-                        <label data-i18n="gateway.actions">Actions</label>
-                    </li>
-                    <li class="nxl-item">
-                        <a href="javascript:void(0);" class="nxl-link" onclick="singleCellApp.refreshGateway()">
-                            <span class="nxl-micon"><i class="feather-refresh-cw"></i></span>
-                            <span class="nxl-mtext" data-i18n="common.refresh">Refresh</span>
                         </a>
                     </li>
                 </ul>
@@ -467,9 +428,6 @@
                             <button type="button" class="btn btn-sm btn-outline-primary" id="view-skills-btn" onclick="singleCellApp.switchView('skills')">
                                 <i class="feather-grid me-1"></i><span data-i18n="view.skills">Skills</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="view-gateway-btn" onclick="singleCellApp.switchView('gateway')">
-                                <i class="feather-share-2 me-1"></i>Gateway
-                            </button>
                         </div>
                     </div>
 
@@ -711,10 +669,10 @@
                                         <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
                                         <h6 class="fw-bold text-primary" data-i18n="upload.analysisMode">分析读取模式</h6>
                                         <p class="text-muted small mb-2" data-i18n="upload.analysisModeDesc">完整加载数据到内存，支持所有分析功能</p>
-                                        <p class="text-muted small" data-i18n="upload.subtitle">点击浏览服务器文件 / 拖放上传本地文件</p>
+                                        <p class="text-muted small" data-i18n="upload.subtitle">拖放或点击选择文件</p>
                                         <input type="file" id="fileInput" accept=".h5ad" style="display: none;">
                                         <button type="button" class="btn btn-primary btn-sm" style="pointer-events: none;">
-                                            <i class="fas fa-server me-1"></i><span data-i18n="upload.button">浏览服务器文件</span>
+                                            <i class="fas fa-folder-open me-1"></i><span data-i18n="upload.button">选择文件</span>
                                         </button>
                                     </div>
                                 </div>
@@ -724,10 +682,10 @@
                                         <i class="fas fa-eye fa-2x text-secondary mb-2"></i>
                                         <h6 class="fw-bold text-secondary" data-i18n="upload.previewMode">仅预览模式</h6>
                                         <p class="text-muted small mb-2" data-i18n="upload.previewModeDesc">低内存读取，不支持分析操作（backed='r'）</p>
-                                        <p class="text-muted small" data-i18n="upload.subtitle">点击浏览服务器文件 / 拖放上传本地文件</p>
+                                        <p class="text-muted small" data-i18n="upload.subtitle">拖放或点击选择文件</p>
                                         <input type="file" id="fileInputPreview" accept=".h5ad" style="display: none;">
                                         <button type="button" class="btn btn-outline-secondary btn-sm" style="pointer-events: none;">
-                                            <i class="fas fa-server me-1"></i><span data-i18n="upload.previewButton">浏览服务器文件</span>
+                                            <i class="fas fa-eye me-1"></i><span data-i18n="upload.previewButton">预览文件</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1674,7 +1632,18 @@
                             <section class="account-card">
                                 <div class="account-card-label" data-i18n="account.status">Status</div>
                                 <div class="account-card-value" id="account-view-status">-</div>
-                                <div class="account-card-meta" data-i18n="account.profileHintEditable">Only the display name is editable for now.</div>
+                                <div class="account-card-meta" data-i18n="account.profileHintEditable">You can update your profile details here.</div>
+                            </section>
+                            <section class="account-card">
+                                <div class="account-card-label" data-i18n="account.fullName">Full Name</div>
+                                <div class="account-card-value" id="account-view-full-name">-</div>
+                                <div class="account-card-meta" data-i18n="account.fullNameHint">Used for account identity and collaboration records.</div>
+                            </section>
+                            <section class="account-card">
+                                <div class="account-card-label" data-i18n="account.institution">Institution</div>
+                                <div class="account-card-value" id="account-view-institution">-</div>
+                                <div class="account-card-meta" data-i18n="account.researchArea">Research Area</div>
+                                <div class="account-card-meta account-card-meta-strong" id="account-view-research-area">-</div>
                             </section>
                         </div>
                         <div class="account-panel">
@@ -1685,13 +1654,35 @@
                                 </div>
                             </div>
                             <form id="account-center-form" class="account-form">
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-center-display-name" data-i18n="account.displayName">Display Name</label>
-                                    <input type="text" class="form-control" id="account-center-display-name" required>
+                                <div class="account-form-grid">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-display-name" data-i18n="account.displayName">Display Name</label>
+                                        <input type="text" class="form-control" id="account-center-display-name" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-full-name" data-i18n="account.fullName">Full Name</label>
+                                        <input type="text" class="form-control" id="account-center-full-name" required>
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-center-email" data-i18n="account.email">Email</label>
-                                    <input type="email" class="form-control" id="account-center-email" readonly>
+                                <div class="account-form-grid">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-email" data-i18n="account.email">Email</label>
+                                        <input type="email" class="form-control" id="account-center-email" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-institution" data-i18n="account.institution">Institution</label>
+                                        <input type="text" class="form-control" id="account-center-institution" required>
+                                    </div>
+                                </div>
+                                <div class="account-form-grid">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-research-area" data-i18n="account.researchArea">Research Area</label>
+                                        <input type="text" class="form-control" id="account-center-research-area" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="account-center-usage-purpose" data-i18n="account.usagePurpose">Usage Purpose</label>
+                                        <input type="text" class="form-control" id="account-center-usage-purpose">
+                                    </div>
                                 </div>
                                 <div class="form-text mb-3" id="account-center-hint" data-i18n="account.profileHintReadonly">Profile information is read only in this view.</div>
                                 <div id="account-center-message" class="alert d-none" style="display:none;"></div>
@@ -1704,191 +1695,6 @@
                     </div>
                 </div>
                 <!-- End Account View -->
-
-                <!-- Gateway View -->
-                <div id="gateway-view" class="content-view" style="display:none;">
-                    <!-- Tab panes -->
-                    <div id="gw-tab-overview" class="gw-tab-pane">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body py-3">
-                                        <div class="fs-2 fw-bold text-primary" id="gw-stat-channels">—</div>
-                                        <div class="text-muted small" data-i18n="gateway.activeChannels">Active Channels</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body py-3">
-                                        <div class="fs-2 fw-bold text-success" id="gw-stat-sessions">—</div>
-                                        <div class="text-muted small" data-i18n="gateway.sessions">Sessions</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body py-3">
-                                        <div class="fs-2 fw-bold text-info" id="gw-stat-messages">—</div>
-                                        <div class="text-muted small" data-i18n="gateway.messages24h">Messages (24 h)</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card text-center">
-                                    <div class="card-body py-3">
-                                        <div class="fs-2 fw-bold text-warning" id="gw-stat-memories">—</div>
-                                        <div class="text-muted small" data-i18n="gateway.memoryDocs">Memory Docs</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="card-header py-2 small fw-semibold">
-                                <i class="feather-activity me-1"></i><span data-i18n="gateway.statusTitle">Gateway Status</span>
-                            </div>
-                            <div class="card-body">
-                                <div id="gw-status-detail" class="text-muted small" data-i18n="common.loading">Loading...</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="gw-tab-channels" class="gw-tab-pane" style="display:none;">
-                        <!-- LLM Model Config -->
-                        <div class="card mb-3">
-                            <div class="card-header py-2 small fw-semibold d-flex align-items-center justify-content-between">
-                                <span><i class="feather-cpu me-1"></i><span data-i18n="gateway.llmModel">LLM Model</span></span>
-                                <div class="d-flex gap-2 align-items-center">
-                                    <span id="gw-config-path" class="text-muted" style="font-size:0.72rem;"></span>
-                                    <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveLLMConfig()">
-                                        <i class="feather-save me-1"></i><span data-i18n="common.save">Save</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="row g-2">
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-semibold mb-1" data-i18n="gateway.model">Model</label>
-                                        <input type="text" id="gw-llm-model" class="form-control form-control-sm" placeholder="gpt-4o, claude-sonnet-4-6…">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label small fw-semibold mb-1"><span data-i18n="gateway.apiKey">API Key</span>
-                                            <span id="gw-llm-key-badge" class="badge bg-secondary ms-1" style="font-size:0.68rem;" data-i18n="gateway.secret.notSet">not set</span>
-                                        </label>
-                                        <input type="password" id="gw-llm-api-key" class="form-control form-control-sm" placeholder="sk-… (leave empty to keep existing)" data-i18n-placeholder="gateway.apiKeyKeepPlaceholder">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label small fw-semibold mb-1"><span data-i18n="gateway.apiEndpoint">API Endpoint</span> <span class="text-muted fw-normal" data-i18n="gateway.optional">(optional)</span></label>
-                                        <input type="text" id="gw-llm-endpoint" class="form-control form-control-sm" placeholder="https://api.openai.com/v1">
-                                    </div>
-                                </div>
-                                <div id="gw-llm-save-result" class="mt-2" style="font-size:0.82rem;display:none;"></div>
-                            </div>
-                        </div>
-
-                        <!-- Channel Cards (rendered by JS) -->
-                        <div id="gw-channel-cards"></div>
-                    </div>
-
-                    <div id="gw-tab-sessions" class="gw-tab-pane" style="display:none;">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h6 class="fw-semibold mb-0"><i class="feather-users me-2"></i><span data-i18n="gateway.activeSessionsTitle">Active Sessions</span></h6>
-                            <button class="btn btn-sm btn-outline-primary" onclick="singleCellApp.refreshGateway()">
-                                <i class="feather-refresh-cw me-1"></i><span data-i18n="common.refresh">Refresh</span>
-                            </button>
-                        </div>
-                        <div id="gw-sessions-list">
-                            <div class="text-muted text-center py-4" data-i18n="gateway.loadingSessions">Loading sessions…</div>
-                        </div>
-                    </div>
-
-                    <div id="gw-tab-memory" class="gw-tab-pane" style="display:none;">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h6 class="fw-semibold mb-0"><i class="feather-database me-2"></i><span data-i18n="gateway.memoryStore">Memory Store</span></h6>
-                            <div class="d-flex gap-2">
-                                <input type="text" id="gw-memory-search" class="form-control form-control-sm" style="width:220px;" placeholder="Search memory…" data-i18n-placeholder="gateway.searchMemory" oninput="singleCellApp.searchMemory(this.value)">
-                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.showMemoryDocModal()">
-                                    <i class="feather-plus me-1"></i><span data-i18n="gateway.newDoc">New Doc</span>
-                                </button>
-                            </div>
-                        </div>
-                        <!-- Folder tree + documents -->
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <div class="card h-100">
-                                    <div class="card-header py-2 small fw-semibold">
-                                        <i class="feather-folder me-1"></i><span data-i18n="gateway.folders">Folders</span>
-                                        <button class="btn btn-xs btn-outline-secondary float-end" style="font-size:0.7rem;padding:1px 6px;" onclick="singleCellApp.showFolderModal()">+</button>
-                                    </div>
-                                    <div class="card-body p-2" id="gw-folder-tree">
-                                        <div class="text-muted small" data-i18n="common.loading">Loading...</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-9">
-                                <div id="gw-memory-docs">
-                                    <div class="text-muted text-center py-4" data-i18n="gateway.loadingDocuments">Loading documents…</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- End Gateway View -->
-
-                <!-- Memory Doc Modal -->
-                <div id="gw-doc-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);overflow-y:auto;">
-                    <div style="background:var(--bs-body-bg,#fff);border-radius:12px;margin:32px auto;max-width:640px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.3);">
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
-                            <span class="fw-semibold" id="gw-doc-modal-title" data-i18n="gateway.newMemoryDocument">New Memory Document</span>
-                            <button class="btn btn-sm btn-light" onclick="singleCellApp.hideMemoryDocModal()"><i class="feather-x"></i></button>
-                        </div>
-                        <div style="padding:20px;">
-                            <input type="hidden" id="gw-doc-edit-id" value="">
-                            <div class="mb-2">
-                                <label class="form-label small fw-semibold" data-i18n="gateway.documentTitle">Title</label>
-                                <input type="text" id="gw-doc-title" class="form-control form-control-sm" placeholder="Document title" data-i18n-placeholder="gateway.documentTitlePlaceholder">
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small fw-semibold" data-i18n="gateway.folder">Folder</label>
-                                <select id="gw-doc-folder" class="form-select form-select-sm">
-                                    <option value="" data-i18n="gateway.root">— root —</option>
-                                </select>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label small fw-semibold" data-i18n="gateway.tags">Tags (comma-separated)</label>
-                                <input type="text" id="gw-doc-tags" class="form-control form-control-sm" placeholder="tag1, tag2" data-i18n-placeholder="gateway.tagsPlaceholder">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label small fw-semibold" data-i18n="gateway.content">Content</label>
-                                <textarea id="gw-doc-content" class="form-control form-control-sm" rows="7" placeholder="Markdown content…" data-i18n-placeholder="gateway.contentPlaceholder"></textarea>
-                            </div>
-                            <div class="d-flex justify-content-end gap-2">
-                                <button class="btn btn-sm btn-secondary" onclick="singleCellApp.hideMemoryDocModal()" data-i18n="common.cancel">Cancel</button>
-                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveMemoryDoc()" data-i18n="common.save">Save</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Folder Modal -->
-                <div id="gw-folder-modal" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,.55);">
-                    <div style="background:var(--bs-body-bg,#fff);border-radius:12px;margin:80px auto;max-width:400px;width:95%;box-shadow:0 16px 48px rgba(0,0,0,.3);">
-                        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--bs-border-color,#dee2e6);">
-                            <span class="fw-semibold" data-i18n="gateway.newFolder">New Folder</span>
-                            <button class="btn btn-sm btn-light" onclick="document.getElementById('gw-folder-modal').style.display='none'"><i class="feather-x"></i></button>
-                        </div>
-                        <div style="padding:18px;">
-                            <div class="mb-2">
-                                <label class="form-label small" data-i18n="gateway.folderName">Folder Name</label>
-                                <input type="text" id="gw-folder-name" class="form-control form-control-sm" placeholder="My folder" data-i18n-placeholder="gateway.folderNamePlaceholder">
-                            </div>
-                            <div class="d-flex justify-content-end gap-2">
-                                <button class="btn btn-sm btn-secondary" onclick="document.getElementById('gw-folder-modal').style.display='none'" data-i18n="common.cancel">Cancel</button>
-                                <button class="btn btn-sm btn-primary" onclick="singleCellApp.saveFolder()" data-i18n="common.create">Create</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Terminal View — fills nxl-container; session list is in nxl-navigation -->
                 <div id="terminal-view" class="content-view term-full-view" style="display:none;">
@@ -2066,59 +1872,130 @@
     <input type="file" id="skill-import-input" accept=".md,.txt" style="display:none;" onchange="singleCellApp.handleSkillImportFile(event)">
 
     <div class="modal fade" id="accountAuthModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg account-auth-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" data-i18n="account.center">Personal Center</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <ul class="nav nav-tabs mb-3" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="account-login-tab" data-bs-toggle="tab" data-bs-target="#account-login-pane" type="button" role="tab" data-i18n="account.signIn">Sign in</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="account-register-tab" data-bs-toggle="tab" data-bs-target="#account-register-pane" type="button" role="tab" data-i18n="account.register">Register</button>
-                        </li>
-                    </ul>
-                    <div id="account-auth-message" class="alert d-none" style="display:none;"></div>
-                    <div class="tab-content">
-                        <div class="tab-pane fade show active" id="account-login-pane" role="tabpanel">
-                            <form id="account-login-form">
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-login-email" data-i18n="account.email">Email</label>
-                                    <input type="email" class="form-control" id="account-login-email" required>
+                <div class="account-auth-shell">
+                    <aside class="account-auth-brand">
+                        <div class="account-auth-brand-top">
+                            <div class="account-auth-logo-wrap">
+                                <img src="static/picture/logo.png" alt="OmicVerse" id="account-auth-brand-logo" data-brand-logo="auth">
+                            </div>
+                            <div class="account-auth-brand-tag" id="account-auth-brand-tag">OmicVerse</div>
+                            <h5 class="account-auth-brand-title" id="account-auth-brand-title">Research account workspace</h5>
+                            <p class="account-auth-brand-subtitle" id="account-auth-brand-subtitle">Sign in to sync your profile, unlock online skills, and keep a persistent identity across sessions.</p>
+                        </div>
+                        <div class="account-auth-feature-list">
+                            <div class="account-auth-feature-item">
+                                <i class="feather-shield"></i>
+                                <div>
+                                    <div class="account-auth-feature-title" data-i18n="account.featureProfileTitle">Persistent profile</div>
+                                    <div class="account-auth-feature-copy" data-i18n="account.featureProfileBody">Keep your account identity, organization, and research context in one place.</div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-login-password" data-i18n="account.password">Password</label>
-                                    <input type="password" class="form-control" id="account-login-password" required>
+                            </div>
+                            <div class="account-auth-feature-item">
+                                <i class="feather-grid"></i>
+                                <div>
+                                    <div class="account-auth-feature-title" data-i18n="account.featureStoreTitle">Online skill access</div>
+                                    <div class="account-auth-feature-copy" data-i18n="account.featureStoreBody">Use your account to access authenticated features in the online skill store.</div>
                                 </div>
-                                <button type="submit" class="btn btn-primary w-100" data-i18n="account.signIn">Sign in</button>
-                            </form>
-                            <div id="account-resend-wrap" style="display:none; margin-top:0.75rem; text-align:center;">
-                                <button type="button" id="account-resend-btn" class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.resendActivation()">
-                                    Resend activation email
-                                </button>
+                            </div>
+                            <div class="account-auth-feature-item">
+                                <i class="feather-lock"></i>
+                                <div>
+                                    <div class="account-auth-feature-title" data-i18n="account.featurePrivacyTitle">Minimal data collection</div>
+                                    <div class="account-auth-feature-copy" data-i18n="account.featurePrivacyBody">We only collect the profile information needed to manage your workspace and service access.</div>
+                                </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="account-register-pane" role="tabpanel">
-                            <form id="account-register-form">
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-register-name" data-i18n="account.displayName">Display Name</label>
-                                    <input type="text" class="form-control" id="account-register-name" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-register-email" data-i18n="account.email">Email</label>
-                                    <input type="email" class="form-control" id="account-register-email" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label" for="account-register-password" data-i18n="account.password">Password</label>
-                                    <input type="password" class="form-control" id="account-register-password" minlength="8" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100" data-i18n="account.register">Register</button>
-                            </form>
+                    </aside>
+                    <section class="account-auth-panel">
+                        <div class="modal-header account-auth-header">
+                            <div>
+                                <h5 class="modal-title" id="account-auth-panel-title" data-i18n="account.center">Personal Center</h5>
+                                <p class="account-auth-panel-subtitle" data-i18n="account.authPanelSubtitle">Use the same account for profile management and online features.</p>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                    </div>
+                        <div class="modal-body account-auth-body">
+                            <ul class="nav nav-pills account-auth-tabs mb-3" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="account-login-tab" data-bs-toggle="tab" data-bs-target="#account-login-pane" type="button" role="tab" data-i18n="account.signIn">Sign in</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="account-register-tab" data-bs-toggle="tab" data-bs-target="#account-register-pane" type="button" role="tab" data-i18n="account.register">Register</button>
+                                </li>
+                            </ul>
+                            <div id="account-auth-message" class="alert d-none" style="display:none;"></div>
+                            <div class="tab-content">
+                                <div class="tab-pane fade show active" id="account-login-pane" role="tabpanel">
+                                    <div class="account-auth-section-copy">
+                                        <h6 data-i18n="account.signInTitle">Welcome back</h6>
+                                        <p data-i18n="account.signInBody">Sign in to restore your profile and continue with your saved account identity.</p>
+                                    </div>
+                                    <form id="account-login-form">
+                                        <div class="mb-3">
+                                            <label class="form-label" for="account-login-email" data-i18n="account.email">Email</label>
+                                            <input type="email" class="form-control" id="account-login-email" data-i18n-placeholder="account.emailPlaceholder" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="account-login-password" data-i18n="account.password">Password</label>
+                                            <input type="password" class="form-control" id="account-login-password" data-i18n-placeholder="account.passwordPlaceholder" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100" data-i18n="account.signIn">Sign in</button>
+                                    </form>
+                                    <div id="account-resend-wrap" style="display:none; margin-top:0.75rem; text-align:center;">
+                                        <button type="button" id="account-resend-btn" class="btn btn-sm btn-outline-secondary" onclick="singleCellApp.resendActivation()">
+                                            Resend activation email
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade" id="account-register-pane" role="tabpanel">
+                                    <div class="account-auth-section-copy">
+                                        <h6 data-i18n="account.registerTitle">Create your research account</h6>
+                                        <p data-i18n="account.registerBody">Tell us who you are so we can keep your workspace profile complete from day one.</p>
+                                    </div>
+                                    <form id="account-register-form">
+                                        <div class="account-form-grid">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-name" data-i18n="account.displayName">Display Name</label>
+                                                <input type="text" class="form-control" id="account-register-name" data-i18n-placeholder="account.displayNamePlaceholder" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-full-name" data-i18n="account.fullName">Full Name</label>
+                                                <input type="text" class="form-control" id="account-register-full-name" data-i18n-placeholder="account.fullNamePlaceholder" required>
+                                            </div>
+                                        </div>
+                                        <div class="account-form-grid">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-institution" data-i18n="account.institution">Institution</label>
+                                                <input type="text" class="form-control" id="account-register-institution" data-i18n-placeholder="account.institutionPlaceholder" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-research-area" data-i18n="account.researchArea">Research Area</label>
+                                                <input type="text" class="form-control" id="account-register-research-area" data-i18n-placeholder="account.researchAreaPlaceholder" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="account-register-usage-purpose" data-i18n="account.usagePurpose">Usage Purpose</label>
+                                            <textarea class="form-control account-textarea" id="account-register-usage-purpose" rows="3" data-i18n-placeholder="account.usagePurposePlaceholder"></textarea>
+                                        </div>
+                                        <div class="account-form-grid">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-email" data-i18n="account.email">Email</label>
+                                                <input type="email" class="form-control" id="account-register-email" data-i18n-placeholder="account.emailPlaceholder" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label" for="account-register-password" data-i18n="account.password">Password</label>
+                                                <input type="password" class="form-control" id="account-register-password" minlength="8" data-i18n-placeholder="account.passwordPlaceholder" required>
+                                            </div>
+                                        </div>
+                                        <div class="account-form-note" data-i18n="account.registerNote">These details are stored with your account and can be updated later in your personal center.</div>
+                                        <button type="submit" class="btn btn-primary w-100" data-i18n="account.register">Register</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -2133,13 +2010,35 @@
                 </div>
                 <div class="modal-body">
                     <form id="account-profile-form">
-                        <div class="mb-3">
-                            <label class="form-label" for="account-profile-display-name" data-i18n="account.displayName">Display Name</label>
-                            <input type="text" class="form-control" id="account-profile-display-name" required>
+                        <div class="account-form-grid">
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-display-name" data-i18n="account.displayName">Display Name</label>
+                                <input type="text" class="form-control" id="account-profile-display-name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-full-name" data-i18n="account.fullName">Full Name</label>
+                                <input type="text" class="form-control" id="account-profile-full-name" required>
+                            </div>
                         </div>
-                        <div class="mb-2">
-                            <label class="form-label" for="account-profile-email" data-i18n="account.email">Email</label>
-                            <input type="email" class="form-control" id="account-profile-email" readonly>
+                        <div class="account-form-grid">
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-email" data-i18n="account.email">Email</label>
+                                <input type="email" class="form-control" id="account-profile-email" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-institution" data-i18n="account.institution">Institution</label>
+                                <input type="text" class="form-control" id="account-profile-institution" required>
+                            </div>
+                        </div>
+                        <div class="account-form-grid">
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-research-area" data-i18n="account.researchArea">Research Area</label>
+                                <input type="text" class="form-control" id="account-profile-research-area" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="account-profile-usage-purpose" data-i18n="account.usagePurpose">Usage Purpose</label>
+                                <input type="text" class="form-control" id="account-profile-usage-purpose">
+                            </div>
                         </div>
                         <div class="form-text mb-3" id="account-profile-hint" data-i18n="account.profileHintReadonly">Profile information is read only in this view.</div>
                         <div id="account-profile-message" class="alert d-none" style="display:none;"></div>

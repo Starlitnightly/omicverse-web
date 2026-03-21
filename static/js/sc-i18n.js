@@ -202,7 +202,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'file.browser': 'File Browser',
                 'file.root': 'Working Directory',
                 'file.empty': 'Empty folder',
-                'file.goUp': 'Go Up',
                 'skills.title': 'Skill Store',
                 'skills.subtitle': 'Browse local skills, import new ones, and open any skill for editing.',
                 'skills.searchPlaceholder': 'Search skills by name or description',
@@ -260,125 +259,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'common.failed': 'Failed',
                 'common.error': 'Error',
                 'common.unknownError': 'Unknown error',
-                'common.save': 'Save',
-                'common.stop': 'Stop',
-                'common.create': 'Create',
-                'view.gatewayTitle': 'Gateway',
-                'breadcrumb.gateway': 'Gateway',
-                'gateway.navTitle': 'Gateway',
-                'gateway.overview': 'Overview',
-                'gateway.channels': 'Channels',
-                'gateway.sessions': 'Sessions',
-                'gateway.memory': 'Memory',
-                'gateway.actions': 'Actions',
-                'gateway.activeChannels': 'Active Channels',
-                'gateway.messages24h': 'Messages (24 h)',
-                'gateway.memoryDocs': 'Memory Docs',
-                'gateway.statusTitle': 'Gateway Status',
-                'gateway.webOnlyMode': 'Gateway API not available — running in web-only mode.',
-                'gateway.noChannelsConnected': 'No channels connected.',
-                'gateway.noChannelsHint': 'Configured channels will appear here after the gateway starts.',
-                'gateway.sessionsShort': 'sess.',
-                'gateway.sessionsLower': 'sessions',
-                'gateway.noActiveSessions': 'No active sessions.',
-                'gateway.sessionId': 'Session ID',
-                'gateway.channel': 'Channel',
-                'gateway.messages': 'Messages',
-                'gateway.lastActive': 'Last Active',
-                'gateway.allDocuments': 'All Documents',
-                'gateway.noDocumentsYet': 'No documents yet.',
-                'gateway.editDocument': 'Edit Document',
-                'gateway.newMemoryDocument': 'New Memory Document',
-                'gateway.titleRequired': 'Title is required',
-                'gateway.deleteDocumentConfirm': 'Delete this document?',
-                'gateway.nameRequired': 'Name required',
-                'gateway.loadingConfigError': 'Could not load config. Ensure the gateway backend is running.',
-                'gateway.llmModel': 'LLM Model',
-                'gateway.model': 'Model',
-                'gateway.apiKey': 'API Key',
-                'gateway.apiEndpoint': 'API Endpoint',
-                'gateway.optional': 'optional',
-                'gateway.activeSessionsTitle': 'Active Sessions',
-                'gateway.memoryStore': 'Memory Store',
-                'gateway.searchMemory': 'Search memory…',
-                'gateway.newDoc': 'New Doc',
-                'gateway.folders': 'Folders',
-                'gateway.newFolder': 'New Folder',
-                'gateway.folderName': 'Folder Name',
-                'gateway.folderNamePlaceholder': 'My folder',
-                'gateway.documentTitle': 'Title',
-                'gateway.documentTitlePlaceholder': 'Document title',
-                'gateway.folder': 'Folder',
-                'gateway.root': '— root —',
-                'gateway.tags': 'Tags (comma-separated)',
-                'gateway.tagsPlaceholder': 'tag1, tag2',
-                'gateway.content': 'Content',
-                'gateway.contentPlaceholder': 'Markdown content…',
-                'gateway.status.running': 'running',
-                'gateway.status.failed': 'failed',
-                'gateway.status.starting': 'starting',
-                'gateway.status.stopped': 'stopped',
-                'gateway.status.notConfigured': 'not configured',
-                'gateway.button.running': 'Running',
-                'gateway.button.stopped': 'Stopped',
-                'gateway.button.notConfigured': 'Not configured',
-                'gateway.button.stop': 'Stop',
-                'gateway.button.logs': 'Logs',
-                'gateway.button.test': 'Test',
-                'gateway.button.testConnection': 'Test Connection',
-                'gateway.button.save': 'Save',
-                'gateway.noOutputYet': 'No output yet.',
-                'gateway.secret.set': 'set',
-                'gateway.secret.notSet': 'not set',
-                'gateway.secret.keepExisting': '(already set — leave blank to keep)',
-                'gateway.secret.enterValue': 'Enter value',
-                'gateway.telegram.token': 'Bot Token',
-                'gateway.telegram.tokenHint': 'Get from @BotFather — set TELEGRAM_BOT_TOKEN env var or enter here',
-                'gateway.telegram.allowedUsers': 'Allowed Users <span class="text-muted fw-normal">(comma-sep usernames/IDs)</span>',
-                'gateway.telegram.allowedUsersPlaceholder': '@username or 123456789',
-                'gateway.telegram.allowedUsersHint': 'Leave empty to allow all users',
-                'gateway.feishu.appId': 'App ID',
-                'gateway.feishu.appSecret': 'App Secret',
-                'gateway.feishu.connectionMode': 'Connection Mode',
-                'gateway.feishu.verificationToken': 'Verification Token',
-                'gateway.feishu.verificationTokenHint': 'Webhook only — optional',
-                'gateway.feishu.encryptKey': 'Encrypt Key',
-                'gateway.feishu.encryptKeyHint': 'Optional',
-                'gateway.feishu.webhookHost': 'Webhook Host',
-                'gateway.feishu.webhookHostHint': 'webhook mode only',
-                'gateway.feishu.webhookPort': 'Webhook Port',
-                'gateway.feishu.webhookPath': 'Webhook Path',
-                'gateway.qq.appId': 'App ID',
-                'gateway.qq.appIdHint': 'From QQ Open Platform → My Apps',
-                'gateway.qq.clientSecret': 'Client Secret',
-                'gateway.qq.clientSecretHint': 'Set QQ_CLIENT_SECRET env var or enter here',
-                'gateway.qq.imageHost': 'Image Host <span class="text-muted fw-normal">(for figures)</span>',
-                'gateway.qq.imageHostHint': 'Required to send charts; leave empty to skip',
-                'gateway.qq.imageServerPort': 'Image Server Port',
-                'gateway.qq.markdown': 'Enable Markdown replies (msg_type=2, requires QQ Open Platform permission)',
-                'gateway.imessage.cliPath': 'imsg CLI Path',
-                'gateway.imessage.cliPathHint': 'Path to the imsg binary',
-                'gateway.imessage.dbPath': 'chat.db Path',
-                'gateway.imessage.includeAttachments': 'Include attachment metadata',
-                'gateway.savedTo': 'Saved to',
-                'gateway.saveFailed': 'Save failed',
-                'gateway.deleteFailed': 'Delete failed',
-                'gateway.testing': 'Testing…',
-                'gateway.startingEllipsis': 'Starting…',
-                'gateway.started': 'Started',
-                'gateway.startFailed': 'Start failed',
-                'gateway.logUnavailable': 'Log endpoint not available.',
-                'gateway.processNotRunning': 'Process not running. Click Start to launch, then open Logs.',
-                'gateway.waitingOutput': '(no output yet — waiting...)',
-                'gateway.deleteSessionConfirm': 'Delete session',
-                'gateway.loadingSessions': 'Loading sessions…',
-                'gateway.loadingDocuments': 'Loading documents…',
-                'gateway.apiKeyKeepPlaceholder': 'sk-… (leave empty to keep existing)',
-                'gateway.apiKeySetPrefix': 'set: ',
-                'gateway.channel.telegram': 'Telegram',
-                'gateway.channel.feishu': 'Feishu / Lark',
-                'gateway.channel.qq': 'QQ Bot',
-                'gateway.channel.imessage': 'iMessage',
                 'agent.configTitle': 'Agent Configuration',
                 'agent.apiBase': 'API Base URL',
                 'agent.apiKey': 'API Key',
@@ -685,7 +565,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.center': 'Personal Center'
                 , 'account.guest': 'Guest'
                 , 'account.guestHint': 'Sign in to manage your profile.'
-                , 'account.authRequired': 'Sign in or register to continue.'
                 , 'account.serverOffline': 'Account server unavailable'
                 , 'account.signIn': 'Sign in'
                 , 'account.register': 'Register'
@@ -694,8 +573,32 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.help': 'Help'
                 , 'account.logout': 'Sign out'
                 , 'account.email': 'Email'
+                , 'account.emailPlaceholder': 'name@lab.org'
                 , 'account.password': 'Password'
+                , 'account.passwordPlaceholder': 'At least 8 characters'
                 , 'account.displayName': 'Display Name'
+                , 'account.displayNamePlaceholder': 'How your name appears in the UI'
+                , 'account.fullName': 'Full Name'
+                , 'account.fullNamePlaceholder': 'Your real name'
+                , 'account.fullNameHint': 'Used for account identity and collaboration records.'
+                , 'account.institution': 'Institution'
+                , 'account.institutionPlaceholder': 'University, lab, company, or hospital'
+                , 'account.researchArea': 'Research Area'
+                , 'account.researchAreaPlaceholder': 'e.g. single-cell atlas, spatial transcriptomics'
+                , 'account.usagePurpose': 'Usage Purpose'
+                , 'account.usagePurposePlaceholder': 'Tell us what you plan to do with OmicVerse or OmicClaw'
+                , 'account.signInTitle': 'Welcome back'
+                , 'account.signInBody': 'Sign in to restore your profile and continue with your saved account identity.'
+                , 'account.registerTitle': 'Create your research account'
+                , 'account.registerBody': 'Tell us who you are so we can keep your workspace profile complete from day one.'
+                , 'account.authPanelSubtitle': 'Use the same account for profile management and online features.'
+                , 'account.registerNote': 'These details are stored with your account and can be updated later in your personal center.'
+                , 'account.featureProfileTitle': 'Persistent profile'
+                , 'account.featureProfileBody': 'Keep your account identity, organization, and research context in one place.'
+                , 'account.featureStoreTitle': 'Online skill access'
+                , 'account.featureStoreBody': 'Use your account to access authenticated features in the online skill store.'
+                , 'account.featurePrivacyTitle': 'Minimal data collection'
+                , 'account.featurePrivacyBody': 'We only collect the profile information needed to manage your workspace and service access.'
                 , 'account.saveProfile': 'Save Profile'
                 , 'account.loginSuccess': 'Signed in successfully'
                 , 'account.registerSuccess': 'Registered successfully'
@@ -705,7 +608,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.profileSaved': 'Profile updated'
                 , 'account.profileSaveFailed': 'Profile update failed'
                 , 'account.profileHintReadonly': 'Profile information is read only in this view.'
-                , 'account.profileHintEditable': 'Only the display name is editable for now.'
+                , 'account.profileHintEditable': 'You can update your account profile details here.'
                 , 'account.profileIntro': 'Manage the information shown in the personal center.'
                 , 'account.loggedInAs': 'Signed in as'
                 , 'account.memberSince': 'Member since'
@@ -897,7 +800,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'file.browser': '文件浏览器',
                 'file.root': '运行目录',
                 'file.empty': '空目录',
-                'file.goUp': '返回上层',
                 'skills.title': '技能商店',
                 'skills.subtitle': '浏览本地 skills，导入新 skill，并直接打开任意 skill 进行编辑。',
                 'skills.searchPlaceholder': '按名称或描述搜索 skill',
@@ -955,125 +857,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 'common.failed': '失败',
                 'common.error': '错误',
                 'common.unknownError': '未知错误',
-                'common.save': '保存',
-                'common.stop': '停止',
-                'common.create': '创建',
-                'view.gatewayTitle': '网关',
-                'breadcrumb.gateway': '网关',
-                'gateway.navTitle': '网关',
-                'gateway.overview': '总览',
-                'gateway.channels': '通道',
-                'gateway.sessions': '会话',
-                'gateway.memory': '记忆库',
-                'gateway.actions': '操作',
-                'gateway.activeChannels': '活动通道',
-                'gateway.messages24h': '消息数（24 小时）',
-                'gateway.memoryDocs': '记忆文档',
-                'gateway.statusTitle': '网关状态',
-                'gateway.webOnlyMode': 'Gateway API 不可用，当前处于仅 Web 模式。',
-                'gateway.noChannelsConnected': '当前没有已连接的通道。',
-                'gateway.noChannelsHint': '网关启动后，已配置的通道会显示在这里。',
-                'gateway.sessionsShort': '会话',
-                'gateway.sessionsLower': '会话',
-                'gateway.noActiveSessions': '当前没有活跃会话。',
-                'gateway.sessionId': '会话 ID',
-                'gateway.channel': '通道',
-                'gateway.messages': '消息数',
-                'gateway.lastActive': '最后活跃时间',
-                'gateway.allDocuments': '全部文档',
-                'gateway.noDocumentsYet': '还没有文档。',
-                'gateway.editDocument': '编辑文档',
-                'gateway.newMemoryDocument': '新建记忆文档',
-                'gateway.titleRequired': '标题不能为空',
-                'gateway.deleteDocumentConfirm': '确定删除这份文档吗？',
-                'gateway.nameRequired': '名称不能为空',
-                'gateway.loadingConfigError': '无法加载配置，请确认 gateway 后端正在运行。',
-                'gateway.llmModel': 'LLM 模型',
-                'gateway.model': '模型',
-                'gateway.apiKey': 'API 密钥',
-                'gateway.apiEndpoint': 'API 地址',
-                'gateway.optional': '可选',
-                'gateway.activeSessionsTitle': '活跃会话',
-                'gateway.memoryStore': '记忆库',
-                'gateway.searchMemory': '搜索记忆…',
-                'gateway.newDoc': '新建文档',
-                'gateway.folders': '文件夹',
-                'gateway.newFolder': '新建文件夹',
-                'gateway.folderName': '文件夹名称',
-                'gateway.folderNamePlaceholder': '我的文件夹',
-                'gateway.documentTitle': '标题',
-                'gateway.documentTitlePlaceholder': '文档标题',
-                'gateway.folder': '文件夹',
-                'gateway.root': '— 根目录 —',
-                'gateway.tags': '标签（逗号分隔）',
-                'gateway.tagsPlaceholder': '标签1, 标签2',
-                'gateway.content': '内容',
-                'gateway.contentPlaceholder': 'Markdown 内容…',
-                'gateway.status.running': '运行中',
-                'gateway.status.failed': '失败',
-                'gateway.status.starting': '启动中',
-                'gateway.status.stopped': '已停止',
-                'gateway.status.notConfigured': '未配置',
-                'gateway.button.running': '运行中',
-                'gateway.button.stopped': '已停止',
-                'gateway.button.notConfigured': '未配置',
-                'gateway.button.stop': '停止',
-                'gateway.button.logs': '日志',
-                'gateway.button.test': '测试',
-                'gateway.button.testConnection': '测试连接',
-                'gateway.button.save': '保存',
-                'gateway.noOutputYet': '暂无输出。',
-                'gateway.secret.set': '已设置',
-                'gateway.secret.notSet': '未设置',
-                'gateway.secret.keepExisting': '（已设置，留空则保持不变）',
-                'gateway.secret.enterValue': '输入值',
-                'gateway.telegram.token': 'Bot Token',
-                'gateway.telegram.tokenHint': '从 @BotFather 获取，也可通过 TELEGRAM_BOT_TOKEN 环境变量设置',
-                'gateway.telegram.allowedUsers': '允许的用户 <span class="text-muted fw-normal">（逗号分隔用户名/ID）</span>',
-                'gateway.telegram.allowedUsersPlaceholder': '@username 或 123456789',
-                'gateway.telegram.allowedUsersHint': '留空表示允许所有用户',
-                'gateway.feishu.appId': 'App ID',
-                'gateway.feishu.appSecret': 'App Secret',
-                'gateway.feishu.connectionMode': '连接模式',
-                'gateway.feishu.verificationToken': 'Verification Token',
-                'gateway.feishu.verificationTokenHint': '仅 webhook 模式需要，可选',
-                'gateway.feishu.encryptKey': 'Encrypt Key',
-                'gateway.feishu.encryptKeyHint': '可选',
-                'gateway.feishu.webhookHost': 'Webhook Host',
-                'gateway.feishu.webhookHostHint': '仅 webhook 模式使用',
-                'gateway.feishu.webhookPort': 'Webhook Port',
-                'gateway.feishu.webhookPath': 'Webhook Path',
-                'gateway.qq.appId': 'App ID',
-                'gateway.qq.appIdHint': '来自 QQ 开放平台 → 我的应用',
-                'gateway.qq.clientSecret': 'Client Secret',
-                'gateway.qq.clientSecretHint': '也可通过 QQ_CLIENT_SECRET 环境变量设置',
-                'gateway.qq.imageHost': '图片 Host <span class="text-muted fw-normal">（用于图表）</span>',
-                'gateway.qq.imageHostHint': '发送图表时必填；留空则跳过',
-                'gateway.qq.imageServerPort': '图片服务端口',
-                'gateway.qq.markdown': '启用 Markdown 回复（msg_type=2，需要 QQ 开放平台权限）',
-                'gateway.imessage.cliPath': 'imsg CLI 路径',
-                'gateway.imessage.cliPathHint': 'imsg 可执行文件路径',
-                'gateway.imessage.dbPath': 'chat.db 路径',
-                'gateway.imessage.includeAttachments': '包含附件元数据',
-                'gateway.savedTo': '已保存到',
-                'gateway.saveFailed': '保存失败',
-                'gateway.deleteFailed': '删除失败',
-                'gateway.testing': '测试中…',
-                'gateway.startingEllipsis': '启动中…',
-                'gateway.started': '已启动',
-                'gateway.startFailed': '启动失败',
-                'gateway.logUnavailable': '日志接口不可用。',
-                'gateway.processNotRunning': '进程未运行。请先点击启动，再打开日志。',
-                'gateway.waitingOutput': '（暂无输出，正在等待…）',
-                'gateway.deleteSessionConfirm': '确定删除会话',
-                'gateway.loadingSessions': '正在加载会话…',
-                'gateway.loadingDocuments': '正在加载文档…',
-                'gateway.apiKeyKeepPlaceholder': 'sk-…（留空则保留现有值）',
-                'gateway.apiKeySetPrefix': '已设置：',
-                'gateway.channel.telegram': 'Telegram',
-                'gateway.channel.feishu': '飞书 / Lark',
-                'gateway.channel.qq': 'QQ 机器人',
-                'gateway.channel.imessage': 'iMessage',
                 'agent.configTitle': 'Agent 配置',
                 'agent.apiBase': 'API Base URL',
                 'agent.apiKey': 'API Key',
@@ -1380,7 +1163,6 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.center': '个人中心'
                 , 'account.guest': '访客'
                 , 'account.guestHint': '登录后可管理右上角个人资料。'
-                , 'account.authRequired': '请先登录或注册后再继续。'
                 , 'account.serverOffline': '账号服务暂不可用'
                 , 'account.signIn': '登录'
                 , 'account.register': '注册'
@@ -1389,8 +1171,32 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.help': '帮助'
                 , 'account.logout': '退出登录'
                 , 'account.email': '邮箱'
+                , 'account.emailPlaceholder': 'name@lab.org'
                 , 'account.password': '密码'
+                , 'account.passwordPlaceholder': '至少 8 位字符'
                 , 'account.displayName': '显示名称'
+                , 'account.displayNamePlaceholder': '界面中显示的名称'
+                , 'account.fullName': '真实姓名'
+                , 'account.fullNamePlaceholder': '请输入真实姓名'
+                , 'account.fullNameHint': '用于账号身份识别和协作记录。'
+                , 'account.institution': '机构'
+                , 'account.institutionPlaceholder': '学校、实验室、公司或医院'
+                , 'account.researchArea': '研究方向'
+                , 'account.researchAreaPlaceholder': '例如：单细胞图谱、空间转录组'
+                , 'account.usagePurpose': '使用目的'
+                , 'account.usagePurposePlaceholder': '简单描述你计划如何使用 OmicVerse 或 OmicClaw'
+                , 'account.signInTitle': '欢迎回来'
+                , 'account.signInBody': '登录后可恢复你的个人资料，并继续使用已保存的账号身份。'
+                , 'account.registerTitle': '创建科研账号'
+                , 'account.registerBody': '注册时补全基本信息，后续个人中心和在线功能会直接复用这些资料。'
+                , 'account.authPanelSubtitle': '同一个账号可用于个人资料管理和在线功能访问。'
+                , 'account.registerNote': '这些信息会随账号一起保存，之后可在个人中心继续修改。'
+                , 'account.featureProfileTitle': '持久化资料'
+                , 'account.featureProfileBody': '将你的身份、机构和研究背景集中保存在一个账号中。'
+                , 'account.featureStoreTitle': '在线技能访问'
+                , 'account.featureStoreBody': '登录后可访问需要账号的在线技能商店功能。'
+                , 'account.featurePrivacyTitle': '最小化采集'
+                , 'account.featurePrivacyBody': '我们只收集管理账号和服务访问所需的基础资料。'
                 , 'account.saveProfile': '保存资料'
                 , 'account.loginSuccess': '登录成功'
                 , 'account.registerSuccess': '注册成功'
@@ -1400,7 +1206,7 @@ Object.assign(SingleCellAnalysis.prototype, {
                 , 'account.profileSaved': '个人资料已更新'
                 , 'account.profileSaveFailed': '个人资料更新失败'
                 , 'account.profileHintReadonly': '当前视图仅展示个人资料。'
-                , 'account.profileHintEditable': '当前仅支持修改显示名称。'
+                , 'account.profileHintEditable': '当前可修改完整的账号资料信息。'
                 , 'account.profileIntro': '管理个人中心中展示的资料信息。'
                 , 'account.loggedInAs': '当前登录邮箱'
                 , 'account.memberSince': '注册时间'
@@ -1453,18 +1259,8 @@ Object.assign(SingleCellAnalysis.prototype, {
         if (this.skillsLoaded && this.currentView === 'skills' && this.renderSkills) {
             this.renderSkills();
         }
-        if (this.currentView === 'gateway') {
-            const pageTitle = document.getElementById('page-title');
-            const breadcrumbTitle = document.getElementById('breadcrumb-title');
-            if (pageTitle) pageTitle.innerHTML = `<i class="feather-share-2 me-2"></i>${this.t('view.gatewayTitle')}`;
-            if (breadcrumbTitle) breadcrumbTitle.textContent = this.t('breadcrumb.gateway');
-            if (this._gatewayLoaded) {
-                this._loadGatewayStatus();
-                this.loadChannelConfig();
-            }
-            if (this._gatewayMemoryLoaded) {
-                this._loadMemoryData(this._gatewayActiveFolderId);
-            }
+        if (this.applyRuntimeBranding) {
+            this.applyRuntimeBranding();
         }
         this.updateCodeCellPlaceholders();
     },

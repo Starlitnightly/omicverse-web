@@ -38,10 +38,6 @@ from utils.notebook_helpers import ensure_default_notebook
 # Import blueprints
 from routes import kernel, files, data, notebooks, skills, account
 from routes.terminal import terminal_bp
-from gateway.routes import gateway_bp
-from gateway.memory_routes import memory_bp
-from gateway.panel_routes import panel_bp
-from gateway.channel_config_routes import channel_config_bp
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -66,14 +62,11 @@ app.config['UPLOAD_FOLDER'] = tempfile.mkdtemp()
 
 # Remote mode detection (Phase 4)
 OV_WEB_REMOTE_MODE = os.environ.get('OV_WEB_REMOTE_MODE', '0') == '1'
-OV_WEB_FORCE_LOGIN = os.environ.get('OV_WEB_FORCE_LOGIN', '0') == '1'
-OV_WEB_LAUNCHER = str(os.environ.get('OV_LAUNCHER') or 'omicverse')
 
 # Global state container (for easier blueprint access)
 class AppState:
     """Container for global application state."""
     def __init__(self):
-        object.__setattr__(self, "_sync_ready", False)
         self.current_adaptor = None
         self.current_adata = None
         self.deg_results   = None     # DataFrame from last DEG analysis
@@ -100,76 +93,10 @@ class AppState:
         self.kernel_sessions = {}
         self.notebook_root = os.getcwd()
         self.file_root = Path(self.notebook_root).resolve()
-        # Gateway mode: set to a GatewayChannelRegistry when running with --with-web
-        self.gateway_registry = None
-        # Session manager mirror for shared AnnData / kernel state.
-        self.session_manager = None
-        object.__setattr__(self, "_sync_ready", True)
-
-    def __setattr__(self, name, value):
-        previous = getattr(self, name, None) if hasattr(self, name) else None
-        object.__setattr__(self, name, value)
-        if not getattr(self, "_sync_ready", False):
-            return
-        if name == "current_adata":
-            if previous is value:
-                return
-            self._sync_current_adata(value)
-        elif name == "current_adaptor":
-            if getattr(self, "current_adata", None) is not None:
-                sync_helper = globals().get("sync_adaptor_with_adata")
-                if callable(sync_helper):
-                    try:
-                        sync_helper()
-                    except Exception:
-                        pass
-
-    def attach_session_manager(self, session_manager):
-        """Attach the active session manager so AnnData changes stay shared."""
-        self.session_manager = session_manager
-        if session_manager is None:
-            return
-        current = getattr(self, "current_adata", None)
-        shared = None
-        if hasattr(session_manager, "get_shared_adata"):
-            try:
-                shared = session_manager.get_shared_adata()
-            except Exception:
-                shared = None
-        if current is None and shared is not None:
-            self.current_adata = shared
-            return
-        if current is not None and hasattr(session_manager, "set_shared_adata"):
-            try:
-                session_manager.set_shared_adata(current, source_session_id="web-state")
-            except Exception:
-                pass
-
-    def _sync_current_adata(self, adata):
-        """Mirror the current AnnData into kernels and shared sessions."""
-        sync_helper = globals().get("sync_adaptor_with_adata")
-        if callable(sync_helper):
-            try:
-                sync_helper()
-            except Exception:
-                pass
-        kernel_executor = getattr(self, "kernel_executor", None)
-        if kernel_executor is not None:
-            try:
-                kernel_executor.sync_adata(adata)
-            except Exception:
-                pass
-        session_manager = getattr(self, "session_manager", None)
-        if session_manager is not None and hasattr(session_manager, "set_shared_adata"):
-            try:
-                session_manager.set_shared_adata(adata, source_session_id="web-state")
-            except Exception:
-                pass
 
 # Create global state instance
 state = AppState()
 state.kernel_executor = InProcessKernelExecutor(state.kernel_lock)
-state.attach_session_manager(session_manager)
 
 # Utility function
 def sync_adaptor_with_adata():
@@ -355,12 +282,6 @@ app.register_blueprint(account.bp, url_prefix='/api/account')
 
 # Terminal blueprint (PTY-based interactive shell)
 app.register_blueprint(terminal_bp)
-
-# Gateway blueprints — unified channel + web context hub
-app.register_blueprint(gateway_bp, url_prefix="/api/gateway")
-app.register_blueprint(memory_bp, url_prefix="/api/gateway/memory")
-app.register_blueprint(panel_bp, url_prefix="/gateway/panel")
-app.register_blueprint(channel_config_bp, url_prefix="/api/gateway/channels")
 
 
 # ============================================================================
@@ -2990,8 +2911,6 @@ def app_config():
     """
     return jsonify({
         'remote_mode': OV_WEB_REMOTE_MODE,
-        'force_login': OV_WEB_FORCE_LOGIN,
-        'launcher': OV_WEB_LAUNCHER,
     })
 
 
@@ -3406,6 +3325,26 @@ def handle_file_too_large(e):
     if max_mb:
         payload['max_size_mb'] = max_mb
     return jsonify(payload), 413
+
+
+@app.route('/api/runtime-config')
+def runtime_config():
+    launcher = str(os.environ.get('OV_LAUNCHER') or 'omicverse').strip().lower() or 'omicverse'
+    force_login = str(os.environ.get('OV_WEB_FORCE_LOGIN') or '').strip() == '1'
+    is_omicclaw = launcher == 'omicclaw'
+    return jsonify({
+        'launcher': launcher,
+        'force_login': force_login,
+        'brand': {
+            'product_name': 'OmicClaw' if is_omicclaw else 'OmicVerse',
+            'tag': 'OmicClaw' if is_omicclaw else 'OmicVerse',
+            'logo_url': (
+                'https://raw.githubusercontent.com/Starlitnightly/ImageStore/main/omicverse_img/'
+                'Gemini_Generated_Image_xefpyexefpyexefp.png'
+                if is_omicclaw else 'static/picture/logo.png'
+            ),
+        },
+    })
 
 
 @app.route('/')
